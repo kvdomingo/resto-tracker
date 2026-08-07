@@ -1,0 +1,25 @@
+[project]
+name = "resto-tracker"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Kenneth V. Domingo", email = "hello@kvd.studio" }
+]
+requires-python = "~=3.14.0"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "fastapi[standard]>=0.141.1",
+    "loguru>=0.7.3",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0",
+    "stytch>=15.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.2",
+    "ty>=0.0.69",
+]
+
+[project.scripts]
