@@ -4,8 +4,9 @@
 # source: restaurants.sql
 from collections.abc import AsyncIterator, Iterator
 import typing
-from typing import Any, cast
+from typing import cast
 
+import adapters.restaurants
 import pydantic
 import sqlalchemy
 import sqlalchemy.exc
@@ -17,14 +18,14 @@ from repositories.generated import models
 
 
 GET_RESTAURANT = """-- name: get_restaurant \\:one
-SELECT id, created_at, created_by_id, tier, tags, instagram_handle, website, menu_url, has_tried, is_reservation_required
+SELECT id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
 FROM restaurants
 WHERE id = :p1
 """
 
 
 LIST_RESTAURANTS = """-- name: list_restaurants \\:many
-SELECT id, created_at, created_by_id, tier, tags, instagram_handle, website, menu_url, has_tried, is_reservation_required
+SELECT id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
 FROM restaurants
 LIMIT :p1 OFFSET :p2
 """
@@ -65,13 +66,14 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
             id=cast(str, row[0]),
             created_at=cast(pydantic.AwareDatetime, row[1]),
             created_by_id=cast(str | None, row[2]),
-            tier=cast(Any, row[3]),
-            tags=cast(list[str], row[4]),
-            instagram_handle=cast(str | None, row[5]),
-            website=cast(str | None, row[6]),
-            menu_url=cast(str | None, row[7]),
-            has_tried=cast(bool, row[8]),
-            is_reservation_required=cast(bool | None, row[9]),
+            name=cast(str, row[3]),
+            price_tier=cast(int, row[4]),
+            tags=cast(list[str], row[5]),
+            branches=cast(list[adapters.restaurants.RestaurantBranches], row[6]),
+            instagram_handle=cast(str | None, row[7]),
+            website=cast(str | None, row[8]),
+            menu_url=cast(str | None, row[9]),
+            is_reservation_required=cast(bool | None, row[10]),
         )
 
     def list_restaurants(self, *, limit: int, offset: int) -> Iterator[models.Restaurant]:
@@ -82,13 +84,14 @@ class Querier[T: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                     id=cast(str, row[0]),
                     created_at=cast(pydantic.AwareDatetime, row[1]),
                     created_by_id=cast(str | None, row[2]),
-                    tier=cast(Any, row[3]),
-                    tags=cast(list[str], row[4]),
-                    instagram_handle=cast(str | None, row[5]),
-                    website=cast(str | None, row[6]),
-                    menu_url=cast(str | None, row[7]),
-                    has_tried=cast(bool, row[8]),
-                    is_reservation_required=cast(bool | None, row[9]),
+                    name=cast(str, row[3]),
+                    price_tier=cast(int, row[4]),
+                    tags=cast(list[str], row[5]),
+                    branches=cast(list[adapters.restaurants.RestaurantBranches], row[6]),
+                    instagram_handle=cast(str | None, row[7]),
+                    website=cast(str | None, row[8]),
+                    menu_url=cast(str | None, row[9]),
+                    is_reservation_required=cast(bool | None, row[10]),
                 )
         except sqlalchemy.exc.IntegrityError as e:
             raise errors._wrap_integrity_error(e, "list_restaurants") from e
@@ -115,13 +118,14 @@ class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.as
             id=cast(str, row[0]),
             created_at=cast(pydantic.AwareDatetime, row[1]),
             created_by_id=cast(str | None, row[2]),
-            tier=cast(Any, row[3]),
-            tags=cast(list[str], row[4]),
-            instagram_handle=cast(str | None, row[5]),
-            website=cast(str | None, row[6]),
-            menu_url=cast(str | None, row[7]),
-            has_tried=cast(bool, row[8]),
-            is_reservation_required=cast(bool | None, row[9]),
+            name=cast(str, row[3]),
+            price_tier=cast(int, row[4]),
+            tags=cast(list[str], row[5]),
+            branches=cast(list[adapters.restaurants.RestaurantBranches], row[6]),
+            instagram_handle=cast(str | None, row[7]),
+            website=cast(str | None, row[8]),
+            menu_url=cast(str | None, row[9]),
+            is_reservation_required=cast(bool | None, row[10]),
         )
 
     async def list_restaurants(self, *, limit: int, offset: int) -> AsyncIterator[models.Restaurant]:
@@ -132,13 +136,14 @@ class AsyncQuerier[T: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.as
                     id=cast(str, row[0]),
                     created_at=cast(pydantic.AwareDatetime, row[1]),
                     created_by_id=cast(str | None, row[2]),
-                    tier=cast(Any, row[3]),
-                    tags=cast(list[str], row[4]),
-                    instagram_handle=cast(str | None, row[5]),
-                    website=cast(str | None, row[6]),
-                    menu_url=cast(str | None, row[7]),
-                    has_tried=cast(bool, row[8]),
-                    is_reservation_required=cast(bool | None, row[9]),
+                    name=cast(str, row[3]),
+                    price_tier=cast(int, row[4]),
+                    tags=cast(list[str], row[5]),
+                    branches=cast(list[adapters.restaurants.RestaurantBranches], row[6]),
+                    instagram_handle=cast(str | None, row[7]),
+                    website=cast(str | None, row[8]),
+                    menu_url=cast(str | None, row[9]),
+                    is_reservation_required=cast(bool | None, row[10]),
                 )
         except sqlalchemy.exc.IntegrityError as e:
             raise errors._wrap_integrity_error(e, "list_restaurants") from e

@@ -19,3 +19,7 @@ sql:
           emit_query_errors: true
           emit_pydantic_models: true
           emit_str_enum: true
+          overrides:
+            - column: restaurants.branches
+              py_type: RestaurantBranches
+              py_import: adapters.restaurants

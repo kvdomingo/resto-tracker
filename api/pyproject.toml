@@ -10,10 +10,12 @@ requires-python = "~=3.14.0"
 dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard]>=0.141.1",
+    "geoalchemy2>=0.20.0",
     "loguru>=0.7.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
     "scalar-fastapi>=1.8.2",
+    "shapely>=2.1.2",
     "sqlalchemy>=2.0.51",
     "stytch>=15.3.0",
 ]
@@ -21,6 +23,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff>=0.16.2",
+    "sqlfluff[rs]>=4.3.0",
     "ty>=0.0.69",
 ]
 
@@ -33,3 +36,17 @@ exclude = ["repositories/generated"]
 extend-immutable-calls = [
     "fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Security"
 ]
+
+[tool.sqlfluff.core]
+dialect = "postgres"
+rules = "core"
+max_line_length = 88
+
+[tool.sqlfluff.indentation]
+indent_unit = "space"
+tab_space_size = 2
+indented_joins = true
+indented_ctes = true
+indented_using_on = true
+indented_then = true
+implicit_indents = "forbid"

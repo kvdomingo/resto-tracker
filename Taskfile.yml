@@ -59,3 +59,12 @@ tasks:
   unmigrate:
     desc: Rollback migration
     cmd: infisical run -- docker compose run --rm -it migrations down
+
+  load-fixtures:
+    desc: Load database fixtures
+    cmd: |
+      for f in api/repositories/sql/fixtures/*.sql; do
+        echo "Loading $f"
+        infisical run -- docker compose exec -T db \
+          sh -c 'psql -v ON_ERROR_STOP=1 -U "$DATABASE_USER" -d "$DATABASE_NAME"' < "$f"
+      done
