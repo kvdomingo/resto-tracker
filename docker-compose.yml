@@ -1,0 +1,74 @@
+volumes:
+  db-data:
+  venv-data:
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql
+    ports:
+      - 5432:5432
+
+  api:
+    build:
+      context: api
+    image: ghcr.io/kvdomingo/resto-tracker-api
+    pull_policy: weekly
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+    entrypoint:
+      - /bin/bash
+      - -euxo
+      - pipefail
+      - -c
+    command:
+      - >
+        uv sync --all-groups --frozen;
+        uv run fastapi dev --host 0.0.0.0 --reload;
+    volumes:
+      - ./api:/app
+      - venv-data:/app/.venv
+    ports:
+      - 8000:8000
+    develop:
+      watch:
+        - path: ./api/pyproject.toml
+          action: restart
+        - path: ./api/uv.lock
+          action: restart
+
+  ui:
+    image: oven/bun:1
+    restart: unless-stopped
+    working_dir: /app
+    entrypoint:
+      - /bin/bash
+      - -euxo
+      - pipefail
+      - -c
+    command:
+      - >
+        bun install --frozen-lockfile;
+        exec bun run dev;
+    volumes:
+      - ./ui:/app
+    ports:
+      - 3000:3000
+    develop:
+      watch:
+        - path: ./ui/package.json
+          action: restart
+        - path: ./ui/bun.lock
+          action: restart

@@ -13,6 +13,7 @@ dependencies = [
     "loguru>=0.7.3",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
+    "scalar-fastapi>=1.8.2",
     "stytch>=15.3.0",
 ]
 
@@ -21,5 +22,3 @@ dev = [
     "ruff>=0.16.2",
     "ty>=0.0.69",
 ]
-
-[project.scripts]

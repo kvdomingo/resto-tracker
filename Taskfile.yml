@@ -1,0 +1,44 @@
+version: "3"
+
+tasks:
+  default:
+    cmd:
+      task: up
+
+  setup:
+    desc: Initial setup
+    ignore_error: true
+    cmds:
+      - pip install -U prek
+      - prek install
+      - uv sync --dev --all-groups
+
+  up:
+    desc: Run the development server
+    interactive: true
+    cmd: infisical run --watch -- docker compose up --build --watch --remove-orphans {{ .CLI_ARGS }}
+
+  stop:
+    desc: Stop containers
+    cmd: docker compose stop {{ .CLI_ARGS }}
+
+  logs:
+    desc: Follow logs
+    interactive: true
+    cmd: docker compose logs --follow {{ .CLI_ARGS }}
+
+  restart:
+    desc: Restart containers
+    cmd: docker compose restart {{ .CLI_ARGS }}
+
+  down:
+    desc: Stop and remove containers
+    cmd: docker compose down {{ .CLI_ARGS }}
+
+  clean:
+    desc: Nuke everything
+    cmd: docker compose down --volumes --remove-orphans {{ .CLI_ARGS }}
+
+  exec:
+    desc: Execute a command in a running container
+    cmd: docker compose exec {{ .CLI_ARGS }}
