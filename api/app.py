@@ -25,7 +25,7 @@ async def docs():
     )
 
 
-app.include_router(restaurants.router)
+app.include_router(restaurants.router, prefix="/api")
 
 if settings.PRODUCTION:
     app.mount("", StaticFiles(directory="static"), name="static")

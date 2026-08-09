@@ -8,6 +8,8 @@
   "files": {
     "ignoreUnknown": false,
     "includes": [
+      "*.json",
+      "*.css",
       "**/src/**/*",
       "**/.vscode/**/*",
       "**/index.html",
@@ -44,5 +46,9 @@
     "formatter": {
       "quoteStyle": "double"
     }
+  },
+  "css": {
+    "linter": { "enabled": true },
+    "formatter": { "enabled": true }
   }
 }

@@ -1,12 +1,19 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import type { QueryClient } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { NuqsAdapter } from "nuqs/adapters/react";
 import type { ReactNode } from "react";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -39,13 +46,28 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootDocument({ children }: { children: ReactNode }) {
+  const { queryClient } = Route.useRouteContext();
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body className="dark">
-        {children}
+        <NuqsAdapter>
+          <QueryClientProvider client={queryClient}>
+            <NavigationMenu className="p-4 bg-secondary max-w-full">
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuLink href="/">Home</NavigationMenuLink>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
+            {children}
+          </QueryClientProvider>
+        </NuqsAdapter>
+
         <TanStackDevtools
           config={{
             position: "bottom-right",
