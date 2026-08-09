@@ -1,16 +1,18 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import Theme, get_scalar_api_reference
+
+from settings import settings
 
 app = FastAPI(
     title="Resto Tracker",
     version="0.1.0",
-    root_path="/api",
     docs_url=None,
     redoc_url=None,
 )
 
 
-@app.get("/docs", include_in_schema=False)
+@app.get("/api/docs", include_in_schema=False)
 async def docs():
     return get_scalar_api_reference(
         openapi_url=app.openapi_url,
@@ -20,6 +22,10 @@ async def docs():
         telemetry=False,
         theme=Theme.MARS,
     )
+
+
+if settings.PRODUCTION:
+    app.mount("", StaticFiles(directory="static"), name="static")
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ services:
     pull_policy: weekly
     restart: unless-stopped
     environment:
+      PYTHON_ENV: development
       PORT: 8000
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
@@ -53,6 +54,8 @@ services:
     image: oven/bun:1
     restart: unless-stopped
     working_dir: /app
+    environment:
+      NODE_ENV: development
     entrypoint:
       - /bin/bash
       - -euxo
