@@ -1,14 +1,16 @@
 ## Purpose
 
-The user-facing point of the app: one list of the restaurants a person has added, each marked as
-already tried or still want to try, with enough filtering to answer "where should we eat".
+The user-facing point of the app: one list of the restaurants a person has
+added, each marked as already tried or still want to try, with enough filtering
+to answer "where should we eat".
 
 ## ADDED Requirements
 
 ### Requirement: Tried / want-to-try status
 
-Every restaurant a user owns SHALL carry exactly one status: `tried` or `want_to_try`. The status
-SHALL be set at creation and SHALL be changeable afterwards.
+Every restaurant a user owns SHALL carry exactly one status: `tried` or
+`want_to_try`. The status SHALL be set at creation and SHALL be changeable
+afterwards.
 
 #### Scenario: Status chosen at creation
 
@@ -23,28 +25,32 @@ SHALL be set at creation and SHALL be changeable afterwards.
 #### Scenario: Marking as tried
 
 - **WHEN** a user changes a `want_to_try` restaurant to `tried`
-- **THEN** the change is persisted and reflected the next time the list is loaded
+- **THEN** the change is persisted and reflected the next time the list is
+  loaded
 
 #### Scenario: Invalid status
 
 - **WHEN** a request supplies a status other than `tried` or `want_to_try`
-- **THEN** the system responds `422 Unprocessable Entity` and the stored status is unchanged
+- **THEN** the system responds `422 Unprocessable Entity` and the stored status
+  is unchanged
 
 ### Requirement: Listing a user's restaurants
 
-The system SHALL return the signed-in user's restaurants, and only theirs, with each entry carrying
-enough detail to render a list row: name, status, tags, first location label, and image URL if set.
+The system SHALL return the signed-in user's restaurants, and only theirs, with
+each entry carrying enough detail to render a list row: name, status, tags,
+first location label, and image URL if set.
 
 #### Scenario: List returns only own restaurants
 
-- **WHEN** a signed-in user requests their list while other users also have restaurants stored
+- **WHEN** a signed-in user requests their list while other users also have
+  restaurants stored
 - **THEN** the response contains exactly the restaurants that user owns
 
 #### Scenario: Empty list
 
 - **WHEN** a user with no restaurants requests their list
-- **THEN** the system responds with an empty collection and the UI shows a prompt to add the first
-  restaurant
+- **THEN** the system responds with an empty collection and the UI shows a
+  prompt to add the first restaurant
 
 #### Scenario: Default ordering
 
@@ -53,8 +59,9 @@ enough detail to render a list row: name, status, tags, first location label, an
 
 ### Requirement: Filtering the list
 
-The system SHALL support filtering the list by status and by tag, and SHALL support a free-text
-search over restaurant name and location labels. Filters SHALL combine as AND.
+The system SHALL support filtering the list by status and by tag, and SHALL
+support a free-text search over restaurant name and location labels. Filters
+SHALL combine as AND.
 
 #### Scenario: Filter by status
 
@@ -74,19 +81,19 @@ search over restaurant name and location labels. Filters SHALL combine as AND.
 #### Scenario: Free-text search
 
 - **WHEN** a user searches for `mega`
-- **THEN** restaurants whose name or any location label contains `mega`, case-insensitively, are
-  returned
+- **THEN** restaurants whose name or any location label contains `mega`,
+  case-insensitively, are returned
 
 #### Scenario: Filters match nothing
 
 - **WHEN** a user applies filters that match none of their restaurants
-- **THEN** the system responds with an empty collection and the UI distinguishes "no matches" from
-  "no restaurants yet"
+- **THEN** the system responds with an empty collection and the UI distinguishes
+  "no matches" from "no restaurants yet"
 
 ### Requirement: Tag list for filtering
 
-The system SHALL expose the distinct tags used across the signed-in user's own restaurants so the
-UI can offer them as filter choices.
+The system SHALL expose the distinct tags used across the signed-in user's own
+restaurants so the UI can offer them as filter choices.
 
 #### Scenario: Tags reflect current data
 
@@ -96,4 +103,5 @@ UI can offer them as filter choices.
 #### Scenario: Tags are per-user
 
 - **WHEN** a user requests their available tags
-- **THEN** tags used only by other users' restaurants are absent from the response
+- **THEN** tags used only by other users' restaurants are absent from the
+  response

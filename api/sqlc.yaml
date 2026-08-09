@@ -1,0 +1,21 @@
+version: "2"
+plugins:
+  - name: py
+    wasm:
+      url: https://github.com/asavoy/alt-sqlc-gen-python/releases/download/v0.2.0/alt-sqlc-gen-python.wasm
+      sha256: ae1210f5b91e428b596e6061f4d8b4717ed22c7f5f456c4d8a5f19d59a73558e
+sql:
+  - schema: "app/db/migrations/versions"
+    queries: "app/db/queries"
+    engine: postgresql
+    codegen:
+      - out: repositories/sql/generated
+        plugin: py
+        options:
+          package: app.repositories.generated
+          emit_sync_querier: true
+          emit_async_querier: true
+          emit_querier_protocol: true
+          emit_query_errors: true
+          emit_pydantic_models: true
+          emit_str_enum: true

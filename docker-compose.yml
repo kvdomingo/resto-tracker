@@ -14,6 +14,25 @@ services:
       - db-data:/var/lib/postgresql
     ports:
       - 5432:5432
+    healthcheck:
+      test: [ 'CMD', 'pg_isready', '-U', '${DATABASE_USER}', '-d', '${DATABASE_NAME}' ]
+      start_period: 10s
+      retries: 3
+      interval: 20s
+      timeout: 2s
+
+  migrations:
+    image: ghcr.io/amacneil/dbmate
+    restart: no
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    working_dir: /migrations
+    volumes:
+      - ./api:/migrations
+    profiles: [ admin ]
+    depends_on:
+      db:
+        condition: service_healthy
 
   api:
     build:

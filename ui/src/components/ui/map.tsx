@@ -1,11 +1,13 @@
 "use client";
 
-import MapLibreGL, { type PopupOptions, type MarkerOptions } from "maplibre-gl";
+import MapLibreGL, { type MarkerOptions, type PopupOptions } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type * as GeoJSON from "geojson";
+import { Loader2, Locate, Maximize, Minus, Plus, X } from "lucide-react";
 import {
   createContext,
   forwardRef,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -14,10 +16,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { X, Minus, Plus, Locate, Maximize, Loader2 } from "lucide-react";
 
 import { cn } from "#/lib/utils.ts";
 
@@ -90,9 +90,7 @@ function getDocumentTheme(): Theme | null {
 // Get system preference
 function getSystemTheme(): Theme {
   if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function useResolvedTheme(themeProp?: "light" | "dark"): Theme {
@@ -282,8 +280,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const initialStyle =
-      resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
+    const initialStyle = resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
     currentStyleRef.current = initialStyle;
 
     const map = new MapLibreGL.Map({
@@ -359,8 +356,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
   useEffect(() => {
     if (!mapInstance || !resolvedTheme) return;
 
-    const newStyle =
-      resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
+    const newStyle = resolvedTheme === "dark" ? mapStyles.dark : mapStyles.light;
 
     if (currentStyleRef.current === newStyle) return;
 
@@ -397,10 +393,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 
   return (
     <MapContext.Provider value={contextValue}>
-      <div
-        ref={containerRef}
-        className={cn("relative h-full w-full", className)}
-      >
+      <div ref={containerRef} className={cn("relative h-full w-full", className)}>
         {(!isLoaded || loading) && <DefaultLoader />}
         {/* SSR-safe: children render only when map is loaded on client */}
         {mapInstance && children}
@@ -485,18 +478,12 @@ function MapMarker({
     }).setLngLat([longitude, latitude]);
 
     const handleClick = (e: MouseEvent) => callbacksRef.current.onClick?.(e);
-    const handleMouseEnter = (e: MouseEvent) =>
-      callbacksRef.current.onMouseEnter?.(e);
-    const handleMouseLeave = (e: MouseEvent) =>
-      callbacksRef.current.onMouseLeave?.(e);
+    const handleMouseEnter = (e: MouseEvent) => callbacksRef.current.onMouseEnter?.(e);
+    const handleMouseLeave = (e: MouseEvent) => callbacksRef.current.onMouseLeave?.(e);
 
     markerInstance.getElement()?.addEventListener("click", handleClick);
-    markerInstance
-      .getElement()
-      ?.addEventListener("mouseenter", handleMouseEnter);
-    markerInstance
-      .getElement()
-      ?.addEventListener("mouseleave", handleMouseLeave);
+    markerInstance.getElement()?.addEventListener("mouseenter", handleMouseEnter);
+    markerInstance.getElement()?.addEventListener("mouseleave", handleMouseLeave);
 
     const handleDragStart = () => {
       const lngLat = markerInstance.getLngLat();
@@ -574,9 +561,7 @@ function MapMarker({
   ]);
 
   return (
-    <MarkerContext.Provider value={{ marker, map }}>
-      {children}
-    </MarkerContext.Provider>
+    <MarkerContext.Provider value={{ marker, map }}>{children}</MarkerContext.Provider>
   );
 }
 
@@ -693,11 +678,7 @@ type MarkerTooltipProps = {
   className?: string;
 } & Omit<PopupOptions, "className" | "closeButton" | "closeOnClick">;
 
-function MarkerTooltip({
-  children,
-  className,
-  ...popupOptions
-}: MarkerTooltipProps) {
+function MarkerTooltip({ children, className, ...popupOptions }: MarkerTooltipProps) {
   const { marker, map } = useMarkerContext();
   const container = useMemo(() => document.createElement("div"), []);
   const { offset, maxWidth } = popupOptions;
@@ -766,11 +747,7 @@ type MarkerLabelProps = {
   position?: "top" | "bottom";
 };
 
-function MarkerLabel({
-  children,
-  className,
-  position = "top",
-}: MarkerLabelProps) {
+function MarkerLabel({ children, className, position = "top" }: MarkerLabelProps) {
   const positionClasses = {
     top: "bottom-full mb-1",
     bottom: "top-full mt-1",
@@ -1223,22 +1200,12 @@ function MapRoute({
       map.off("mouseenter", layerId, handleMouseEnter);
       map.off("mouseleave", layerId, handleMouseLeave);
     };
-  }, [
-    isLoaded,
-    map,
-    layerId,
-    onClick,
-    onMouseEnter,
-    onMouseLeave,
-    interactive,
-  ]);
+  }, [isLoaded, map, layerId, onClick, onMouseEnter, onMouseLeave, interactive]);
 
   return null;
 }
 
-type MapGeoJSONData<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
-> =
+type MapGeoJSONData<P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties> =
   | GeoJSON.FeatureCollection<GeoJSON.Geometry, P>
   | GeoJSON.Feature<GeoJSON.Geometry, P>
   | GeoJSON.Geometry
@@ -1253,58 +1220,56 @@ type MapGeoJSONFeature<
 > = Omit<MapLibreGL.MapGeoJSONFeature, "properties"> & { properties: P };
 
 /** Event payload passed to MapGeoJSON interaction callbacks. */
-type MapGeoJSONEvent<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
-> = {
-  /** The feature under the cursor, with its typed GeoJSON properties. */
-  feature: MapGeoJSONFeature<P>;
-  /** Longitude of the cursor at the time of the event. */
-  longitude: number;
-  /** Latitude of the cursor at the time of the event. */
-  latitude: number;
-  /** The underlying MapLibre mouse event for advanced use cases. */
-  originalEvent: MapLibreGL.MapLayerMouseEvent;
-};
+type MapGeoJSONEvent<P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties> =
+  {
+    /** The feature under the cursor, with its typed GeoJSON properties. */
+    feature: MapGeoJSONFeature<P>;
+    /** Longitude of the cursor at the time of the event. */
+    longitude: number;
+    /** Latitude of the cursor at the time of the event. */
+    latitude: number;
+    /** The underlying MapLibre mouse event for advanced use cases. */
+    originalEvent: MapLibreGL.MapLayerMouseEvent;
+  };
 
-type MapGeoJSONProps<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
-> = {
-  /** GeoJSON data (FeatureCollection, Feature, Geometry) or a URL to fetch it from. */
-  data: MapGeoJSONData<P>;
-  /** Optional unique identifier prefix for the source/layers. Auto-generated if not provided. */
-  id?: string;
-  /**
-   * Feature property to promote to the feature `id`. Required for hover
-   * feature-state (`fillHoverPaint`) and stable `onHover`/`onClick` payloads.
-   */
-  promoteId?: string;
-  /**
-   * Paint for the polygon fill layer. Merged on top of a theme-aware monochrome
-   * surface tone (`fill-color`). Pass `false` to omit the fill layer entirely
-   * (e.g. outlines only).
-   */
-  fillPaint?: MapFillPaint | false;
-  /**
-   * Paint for the outline layer. Merged on top of a hairline default
-   * (`line-color` = a near-surface neutral, `line-width` = 0.5) for thin
-   * separators. Override `line-color` if your container differs, or pass
-   * `false` to omit the layer.
-   */
-  linePaint?: MapLinePaint | false;
-  /**
-   * Paint merged onto the fill layer for the feature under the cursor, applied
-   * as a `case` expression keyed on hover feature-state. Requires `promoteId`.
-   */
-  fillHoverPaint?: MapFillPaint;
-  /** Callback when a feature is clicked. */
-  onClick?: (e: MapGeoJSONEvent<P>) => void;
-  /** Callback fired when the hovered feature changes; `null` when the cursor leaves. */
-  onHover?: (e: MapGeoJSONEvent<P> | null) => void;
-  /** Whether features respond to mouse events (default: false). */
-  interactive?: boolean;
-  /** Optional MapLibre layer id to insert the layers before (z-order control). */
-  beforeId?: string;
-};
+type MapGeoJSONProps<P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties> =
+  {
+    /** GeoJSON data (FeatureCollection, Feature, Geometry) or a URL to fetch it from. */
+    data: MapGeoJSONData<P>;
+    /** Optional unique identifier prefix for the source/layers. Auto-generated if not provided. */
+    id?: string;
+    /**
+     * Feature property to promote to the feature `id`. Required for hover
+     * feature-state (`fillHoverPaint`) and stable `onHover`/`onClick` payloads.
+     */
+    promoteId?: string;
+    /**
+     * Paint for the polygon fill layer. Merged on top of a theme-aware monochrome
+     * surface tone (`fill-color`). Pass `false` to omit the fill layer entirely
+     * (e.g. outlines only).
+     */
+    fillPaint?: MapFillPaint | false;
+    /**
+     * Paint for the outline layer. Merged on top of a hairline default
+     * (`line-color` = a near-surface neutral, `line-width` = 0.5) for thin
+     * separators. Override `line-color` if your container differs, or pass
+     * `false` to omit the layer.
+     */
+    linePaint?: MapLinePaint | false;
+    /**
+     * Paint merged onto the fill layer for the feature under the cursor, applied
+     * as a `case` expression keyed on hover feature-state. Requires `promoteId`.
+     */
+    fillHoverPaint?: MapFillPaint;
+    /** Callback when a feature is clicked. */
+    onClick?: (e: MapGeoJSONEvent<P>) => void;
+    /** Callback fired when the hovered feature changes; `null` when the cursor leaves. */
+    onHover?: (e: MapGeoJSONEvent<P> | null) => void;
+    /** Whether features respond to mouse events (default: false). */
+    interactive?: boolean;
+    /** Optional MapLibre layer id to insert the layers before (z-order control). */
+    beforeId?: string;
+  };
 
 // Monochrome defaults: a neutral-gray fill (hex of the grayscale chart tokens)
 // with a fixed near-surface line for thin separators. Colors are hardcoded (not
@@ -1321,9 +1286,7 @@ const GEOJSON_DEFAULT_COLORS = {
  * choropleths and region/data maps. For full control over expressions and
  * multiple layers, manage layers directly via `useMap()` instead.
  */
-function MapGeoJSON<
-  P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties,
->({
+function MapGeoJSON<P extends GeoJSON.GeoJsonProperties = GeoJSON.GeoJsonProperties>({
   data,
   id: propId,
   promoteId,
@@ -1391,9 +1354,7 @@ function MapGeoJSON<
   // Sync data when it changes.
   useEffect(() => {
     if (!isLoaded || !map) return;
-    const source = map.getSource(sourceId) as
-      | MapLibreGL.GeoJSONSource
-      | undefined;
+    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource | undefined;
     source?.setData(data as never);
   }, [isLoaded, map, data, sourceId]);
 
@@ -1434,20 +1395,12 @@ function MapGeoJSON<
 
     if (showFill && map.getLayer(fillLayerId)) {
       for (const [key, value] of Object.entries(mergedFillPaint)) {
-        map.setPaintProperty(
-          fillLayerId,
-          key as keyof MapFillPaint,
-          value as never,
-        );
+        map.setPaintProperty(fillLayerId, key as keyof MapFillPaint, value as never);
       }
     }
     if (showLine && map.getLayer(lineLayerId)) {
       for (const [key, value] of Object.entries(mergedLinePaint)) {
-        map.setPaintProperty(
-          lineLayerId,
-          key as keyof MapLinePaint,
-          value as never,
-        );
+        map.setPaintProperty(lineLayerId, key as keyof MapLinePaint, value as never);
       }
     }
   }, [
@@ -1473,10 +1426,7 @@ function MapGeoJSON<
       if (next === hoveredId) return;
       const sourceExists = !!map.getSource(sourceId);
       if (hoveredId != null && sourceExists) {
-        map.setFeatureState(
-          { source: sourceId, id: hoveredId },
-          { hover: false },
-        );
+        map.setFeatureState({ source: sourceId, id: hoveredId }, { hover: false });
       }
       hoveredId = next;
       if (next != null && sourceExists) {
@@ -1556,9 +1506,7 @@ type MapArcEvent<T extends MapArcDatum = MapArcDatum> = {
 };
 
 type MapArcLinePaint = NonNullable<MapLibreGL.LineLayerSpecification["paint"]>;
-type MapArcLineLayout = NonNullable<
-  MapLibreGL.LineLayerSpecification["layout"]
->;
+type MapArcLineLayout = NonNullable<MapLibreGL.LineLayerSpecification["layout"]>;
 
 type MapArcProps<T extends MapArcDatum = MapArcDatum> = {
   /** Array of arcs to render. Each arc must have a unique `id`. */
@@ -1685,10 +1633,7 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
     () => mergeHoverPaint({ ...DEFAULT_ARC_PAINT, ...paint }, hoverPaint),
     [paint, hoverPaint],
   );
-  const mergedLayout = useMemo(
-    () => ({ ...DEFAULT_ARC_LAYOUT, ...layout }),
-    [layout],
-  );
+  const mergedLayout = useMemo(() => ({ ...DEFAULT_ARC_LAYOUT, ...layout }), [layout]);
 
   const hitWidth = useMemo(() => {
     const w = paint?.["line-width"] ?? DEFAULT_ARC_PAINT["line-width"];
@@ -1768,9 +1713,7 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
   // Sync features when data / curvature / samples change.
   useEffect(() => {
     if (!isLoaded || !map) return;
-    const source = map.getSource(sourceId) as
-      | MapLibreGL.GeoJSONSource
-      | undefined;
+    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource | undefined;
     source?.setData(geoJSON);
   }, [isLoaded, map, geoJSON, sourceId]);
 
@@ -1778,18 +1721,10 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
   useEffect(() => {
     if (!isLoaded || !map || !map.getLayer(layerId)) return;
     for (const [key, value] of Object.entries(mergedPaint)) {
-      map.setPaintProperty(
-        layerId,
-        key as keyof MapArcLinePaint,
-        value as never,
-      );
+      map.setPaintProperty(layerId, key as keyof MapArcLinePaint, value as never);
     }
     for (const [key, value] of Object.entries(mergedLayout)) {
-      map.setLayoutProperty(
-        layerId,
-        key as keyof MapArcLineLayout,
-        value as never,
-      );
+      map.setLayoutProperty(layerId, key as keyof MapArcLineLayout, value as never);
     }
     if (map.getLayer(hitLayerId)) {
       map.setPaintProperty(hitLayerId, "line-width", hitWidth);
@@ -1806,10 +1741,7 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
       if (next === hoveredId) return;
       const sourceExists = !!map.getSource(sourceId);
       if (hoveredId != null && sourceExists) {
-        map.setFeatureState(
-          { source: sourceId, id: hoveredId },
-          { hover: false },
-        );
+        map.setFeatureState({ source: sourceId, id: hoveredId }, { hover: false });
       }
       hoveredId = next;
       if (next != null && sourceExists) {
@@ -1820,9 +1752,7 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
     const findArc = (featureId: string | number | undefined) =>
       featureId == null
         ? undefined
-        : latestRef.current.data.find(
-            (arc) => String(arc.id) === String(featureId),
-          );
+        : latestRef.current.data.find((arc) => String(arc.id) === String(featureId));
 
     const handleMouseMove = (e: MapLibreGL.MapLayerMouseEvent) => {
       const featureId = e.features?.[0]?.id as string | number | undefined;
@@ -2011,10 +1941,8 @@ function MapClusterLayer<
 
     return () => {
       try {
-        if (map.getLayer(clusterCountLayerId))
-          map.removeLayer(clusterCountLayerId);
-        if (map.getLayer(unclusteredLayerId))
-          map.removeLayer(unclusteredLayerId);
+        if (map.getLayer(clusterCountLayerId)) map.removeLayer(clusterCountLayerId);
+        if (map.getLayer(unclusteredLayerId)) map.removeLayer(unclusteredLayerId);
         if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
         if (map.getSource(sourceId)) map.removeSource(sourceId);
       } catch {
@@ -2126,9 +2054,10 @@ function MapClusterLayer<
       if (!onPointClick || !e.features?.length) return;
 
       const feature = e.features[0];
-      const coordinates = (
-        feature.geometry as GeoJSON.Point
-      ).coordinates.slice() as [number, number];
+      const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice() as [
+        number,
+        number,
+      ];
 
       // Handle world copies
       while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
@@ -2185,41 +2114,40 @@ function MapClusterLayer<
   return null;
 }
 
-export {
-  Map,
-  useMap,
-  MapMarker,
-  MarkerContent,
-  MarkerPopup,
-  MarkerTooltip,
-  MarkerLabel,
-  MapPopup,
-  MapControls,
-  MapRoute,
-  MapArc,
-  MapGeoJSON,
-  MapClusterLayer,
-};
-
 export type {
-  MapRef,
-  MapViewport,
-  MapStyleOption,
   MapArcDatum,
   MapArcEvent,
+  MapArcProps,
+  MapClusterLayerProps,
+  MapControlsProps,
   MapGeoJSONData,
-  MapGeoJSONFeature,
   MapGeoJSONEvent,
-  MapProps,
+  MapGeoJSONFeature,
+  MapGeoJSONProps,
   MapMarkerProps,
+  MapPopupProps,
+  MapProps,
+  MapRef,
+  MapRouteProps,
+  MapStyleOption,
+  MapViewport,
   MarkerContentProps,
+  MarkerLabelProps,
   MarkerPopupProps,
   MarkerTooltipProps,
-  MarkerLabelProps,
-  MapControlsProps,
-  MapPopupProps,
-  MapRouteProps,
-  MapArcProps,
-  MapGeoJSONProps,
-  MapClusterLayerProps,
+};
+export {
+  Map,
+  MapArc,
+  MapClusterLayer,
+  MapControls,
+  MapGeoJSON,
+  MapMarker,
+  MapPopup,
+  MapRoute,
+  MarkerContent,
+  MarkerLabel,
+  MarkerPopup,
+  MarkerTooltip,
+  useMap,
 };
