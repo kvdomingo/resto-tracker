@@ -4,7 +4,8 @@ volumes:
 
 services:
   db:
-    image: postgres:18
+    image: ghcr.io/kvdomingo/postgresql-pig:18
+    pull_policy: weekly
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DATABASE_USER}
@@ -22,13 +23,16 @@ services:
       timeout: 2s
 
   migrations:
-    image: ghcr.io/amacneil/dbmate
+    image: ghcr.io/amacneil/dbmate:latest
     restart: no
+    user: 1000:1000
     environment:
       DATABASE_URL: ${DATABASE_URL}
-    working_dir: /migrations
+      DBMATE_MIGRATIONS_DIR: /app/repositories/sql/migrations
+      DBMATE_SCHEMA_FILE: /app/repositories/sql/schema.sql
+    working_dir: /app
     volumes:
-      - ./api:/migrations
+      - ./api:/app
     profiles: [ admin ]
     depends_on:
       db:
@@ -43,11 +47,7 @@ services:
     environment:
       PYTHON_ENV: development
       PORT: 8000
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_HOST: ${DATABASE_HOST}
-      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_URL: ${DATABASE_URL}
     entrypoint:
       - /bin/bash
       - -euxo

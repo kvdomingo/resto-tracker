@@ -1,5 +1,7 @@
 [global]
 disable = ["MD033"]
+flavor = "gfm"
+line-length = 88
 
 [MD013]
 reflow = true

@@ -177,8 +177,7 @@ simpler, but every request inherits Stytch's availability and latency.
 
 ### User provisioning on first sign-in
 
-The first authenticated request for an unknown Stytch user ID inserts a `users`
-row via
+The first authenticated request for an unknown Stytch user ID inserts a `users` row via
 `INSERT ... ON CONFLICT (stytch_user_id) DO UPDATE SET email = EXCLUDED.email RETURNING *`.
 
 *Why upsert rather than a dedicated signup endpoint:* Stytch already ran the

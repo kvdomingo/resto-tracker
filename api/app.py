@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import Theme, get_scalar_api_reference
 
+from routers import restaurants
 from settings import settings
 
 app = FastAPI(
@@ -23,6 +24,8 @@ async def docs():
         theme=Theme.MARS,
     )
 
+
+app.include_router(restaurants.router)
 
 if settings.PRODUCTION:
     app.mount("", StaticFiles(directory="static"), name="static")

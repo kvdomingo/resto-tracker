@@ -1,11 +1,5 @@
 version: "3"
 
-env:
-  DBMATE_MIGRATIONS_DIR:
-    sh: echo "$(pwd)/api/repositories/sql/migrations"
-  DBMATE_SCHEMA_FILE:
-    sh: echo "$(pwd)/api/repositories/sql/schema.sql"
-
 tasks:
   default:
     cmd:
@@ -51,6 +45,7 @@ tasks:
 
   pgcli:
     desc: Connect to the db container via pgcli
+    interactive: true
     cmd: pgcli postgres://postgres:postgres@localhost:5432/postgres
 
   makemigrations:
@@ -59,4 +54,8 @@ tasks:
 
   migrate:
     desc: Apply migrations
-    cmd: infisical run -- docker compose --rm -it migrations dbmate up
+    cmd: infisical run -- docker compose run --rm -it migrations up
+
+  unmigrate:
+    desc: Rollback migration
+    cmd: infisical run -- docker compose run --rm -it migrations down

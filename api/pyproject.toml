@@ -23,3 +23,13 @@ dev = [
     "ruff>=0.16.2",
     "ty>=0.0.69",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+exclude = ["repositories/generated"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Security"
+]

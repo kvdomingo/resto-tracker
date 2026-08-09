@@ -1,6 +1,6 @@
 ## 1. Repository and local stack
 
-- [ ] 1.1 Create the layout from `design.md`: `backend/`, `frontend/`, `infra/`,
+- [ ] 1.1 Create the layout from `design.md`: `api/`, `ui/`, `infra/`,
       root `sqlc.yaml`, `Dockerfile`, `docker-compose.yaml`, `Taskfile.yaml`,
       `.gitignore`, `.env.example`
 - [ ] 1.2 Write the root `Taskfile.yaml` with `generate` (depends on
@@ -12,7 +12,7 @@
       binary in both dev images
 - [ ] 1.4 Add the `develop.watch` blocks from `design.md`: backend watches
       `app/routers` and `app/schemas` with `sync+exec` →
-      `task generate:openapi`, frontend watches `backend/openapi.json` with
+      `task generate:openapi`, frontend watches `api/openapi.json` with
       `sync+exec` → `task generate:types`, plus `rebuild` on each dependency
       manifest
 - [ ] 1.5 Verify the chain end to end — edit a Pydantic response model, confirm
@@ -45,8 +45,8 @@
 ## 3. Query layer (sqlc)
 
 - [ ] 3.1 Configure `sqlc.yaml` for `sqlc-gen-python` with the asyncpg driver,
-      schema pointed at `backend/sql/migrations/`, queries at
-      `backend/sql/queries.sql`, output to `backend/generated/`
+      schema pointed at `api/sql/migrations/`, queries at
+      `api/sql/queries.sql`, output to `api/generated/`
 - [ ] 3.2 Write the user queries: upsert-by-`stytch_user_id` returning the row,
       and get-by-id
 - [ ] 3.3 Write the restaurant write queries: insert, update, delete — each
@@ -73,7 +73,7 @@
       for K8s probes
 - [ ] 4.4 Configure CORS for the local Vite dev origin only — production is
       same-origin and needs none
-- [ ] 4.5 Mount the built frontend: `StaticFiles` over `frontend/dist` with an
+- [ ] 4.5 Mount the built frontend: `StaticFiles` over `ui/dist` with an
       SPA catch-all returning `index.html`, registered after the `/api` routes
       so unknown API paths still return JSON 404; hashed assets get a long
       `max-age`, `index.html` gets `no-store`
@@ -130,7 +130,7 @@
 - [ ] 7.2 Add the Stytch React provider, a login screen, and a route guard that
       sends unauthenticated visitors to sign-in
 - [ ] 7.3 Wire `openapi-typescript` into `task generate:types`: read the
-      `openapi.json` from 6.11, emit `frontend/src/api/schema.d.ts`, commit it,
+      `openapi.json` from 6.11, emit `ui/src/api/schema.d.ts`, commit it,
       and extend the CI freshness check to cover it
 - [ ] 7.4 Build the API client with `openapi-fetch` rooted at the relative path
       `/api` (same-origin in production, Vite dev-server proxy locally), with a
