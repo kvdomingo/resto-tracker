@@ -8,12 +8,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react";
 import type { ReactNode } from "react";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
+import { Navbar } from "@/components/navbar";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -56,14 +51,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body className="dark">
         <NuqsAdapter>
           <QueryClientProvider client={queryClient}>
-            <NavigationMenu className="p-4 bg-secondary max-w-full">
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <NavigationMenuLink href="/">Home</NavigationMenuLink>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-
+            <Navbar />
             {children}
           </QueryClientProvider>
         </NuqsAdapter>

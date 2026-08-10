@@ -13,7 +13,7 @@ repos:
       - id: biome-check
         name: biome check
         language: node
-        entry: bash -c 'cd ui && exec bun run biome check --write --no-errors-on-unmatched .'
+        entry: bash -c 'cd ui && exec bun run biome check --write --unsafe --no-errors-on-unmatched .'
         files: ^ui/
         pass_filenames: false
   - repo: https://github.com/rvben/rumdl-pre-commit
