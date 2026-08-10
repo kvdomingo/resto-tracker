@@ -1,4 +1,4 @@
-import { SearchIcon, XIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useDebounceCallback } from "usehooks-ts";
 import {
@@ -53,44 +53,55 @@ export function Navbar() {
             <InputGroupAddon>
               <SearchIcon />
             </InputGroupAddon>
-            <InputGroupAddon align="inline-end">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => {
-                  setInnerSearch("");
-                  debouncedSetSearch("");
-                }}
-              >
-                <XIcon />
-              </Button>
-            </InputGroupAddon>
+            {innerSearch && (
+              <InputGroupAddon align="inline-end">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => {
+                    setInnerSearch("");
+                    debouncedSetSearch("");
+                  }}
+                >
+                  <XIcon />
+                </Button>
+              </InputGroupAddon>
+            )}
           </InputGroup>
         </NavigationMenuItem>
-        <NavigationMenuItem className="basis-1/3 flex justify-end">
-          {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar>
-                  <AvatarFallback>S</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                  Hello, <b>System</b>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => setIsLoggedIn(false)}>
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button onClick={() => setIsLoggedIn(true)}>Login</Button>
+        <div className="basis-1/3 flex justify-end items-center gap-2">
+          {isLoggedIn && (
+            <NavigationMenuItem>
+              <Button variant="ghost" size="icon-sm">
+                <PlusIcon />
+              </Button>
+            </NavigationMenuItem>
           )}
-        </NavigationMenuItem>
+          <NavigationMenuItem>
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar>
+                    <AvatarFallback>S</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    Hello, <b>System</b>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => setIsLoggedIn(false)}>
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={() => setIsLoggedIn(true)}>Login</Button>
+            )}
+          </NavigationMenuItem>
+        </div>
       </NavigationMenuList>
     </NavigationMenu>
   );
