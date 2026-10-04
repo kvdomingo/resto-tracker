@@ -1,5 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDebounceCallback } from "usehooks-ts";
 import {
   InputGroup,
@@ -12,6 +13,7 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu.tsx";
 import { useRootQueryStates } from "@/hooks/use-root-query-states";
+import { $api } from "@/lib/api";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -31,8 +33,26 @@ export function Navbar() {
     setState({ search });
   }, 300);
 
-  // Mock login
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { data: loginUrl } = $api.useQuery("get", "/api/auth/login", {
+    parseAs: "text",
+  });
+
+  const { data: me } = $api.useQuery("get", "/api/auth/me");
+  const isLoggedIn = me != null;
+
+  const avatarFallback = useMemo(() => {
+    if (me == null) return null;
+
+    if (me.name != null && me.name.length > 0) {
+      return me.name
+        .split(" ")
+        .map((word) => word.at(0)?.toUpperCase() ?? "")
+        .join("");
+    }
+    return me.email.slice(0, 2).toUpperCase();
+  }, [me]);
+
+  const myName = useMemo(() => (me ? (me.name ?? me.email) : "User"), [me]);
 
   return (
     <NavigationMenu className="p-4 bg-secondary w-full max-w-full [&>div:has(>ul)]:w-full">
@@ -81,24 +101,28 @@ export function Navbar() {
             {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Avatar>
-                    <AvatarFallback>S</AvatarFallback>
+                  <Avatar className="cursor-pointer">
+                    <AvatarFallback>{avatarFallback}</AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
-                    Hello, <b>System</b>
+                    Hello, <b>{myName}</b>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => setIsLoggedIn(false)}>
-                      Logout
+                    <DropdownMenuItem asChild>
+                      <a href="/api/auth/logout" className="text-foreground">
+                        Logout
+                      </a>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => setIsLoggedIn(true)}>Login</Button>
+              <Button asChild disabled={!loginUrl}>
+                <Link to={loginUrl}>Login</Link>
+              </Button>
             )}
           </NavigationMenuItem>
         </div>

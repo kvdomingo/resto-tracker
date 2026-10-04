@@ -17,7 +17,7 @@ const config = defineConfig({
       preset: "bun",
       devProxy: {
         "/api/**": {
-          target: process.env.API_URL ?? "http://api:8000",
+          target: process.env.API_PROXY_URL ?? "http://api:8000",
           changeOrigin: true,
         },
       },

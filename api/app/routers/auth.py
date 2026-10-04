@@ -12,8 +12,8 @@ from app.settings import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.get("/api-login", response_class=PlainTextResponse)
-async def api_login():
+@router.get("/login", response_class=PlainTextResponse)
+async def login():
     return settings.STYTCH_CALLBACK_URL.encoded_string()
 
 
