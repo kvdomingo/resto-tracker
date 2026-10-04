@@ -1,8 +1,15 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from scalar_fastapi import Theme, get_scalar_api_reference
+import importlib
+import pkgutil
+from datetime import timedelta
 
-from app.routers import restaurants
+from fastapi import APIRouter, FastAPI
+from fastapi.responses import PlainTextResponse
+from scalar_fastapi import Theme, get_scalar_api_reference
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
+from app import routers
+from app.internals.auth import StytchAuthBackend
 from app.settings import settings
 
 app = FastAPI(
@@ -11,6 +18,24 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+app.add_middleware(
+    AuthenticationMiddleware,
+    backend=StytchAuthBackend(),
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY.get_secret_value(),
+    session_cookie="session",
+    max_age=int(timedelta(days=7).total_seconds()),
+    path="/",
+    same_site="strict",
+    https_only=settings.PROD,
+)
+
+
+@app.get("/api/health", response_class=PlainTextResponse, tags=["utils"])
+async def healthcheck():
+    return "ok"
 
 
 @app.get("/api/docs", include_in_schema=False)
@@ -25,10 +50,13 @@ async def docs():
     )
 
 
-app.include_router(restaurants.router, prefix="/api")
+for info in pkgutil.iter_modules(routers.__path__):
+    module = importlib.import_module(f"{routers.__name__}.{info.name}")
+    if isinstance(getattr(module, "router", None), APIRouter):
+        app.include_router(module.router, prefix="/api")
 
-if settings.PRODUCTION:
-    app.mount("", StaticFiles(directory="static"), name="static")
+if settings.PROD:
+    app.frontend("/", directory="static", fallback="index.html")
 
 
 if __name__ == "__main__":

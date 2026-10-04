@@ -4,6 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.models.pagination import Paginated, PaginatedMeta
 from app.repositories.generated.models import Restaurant
+from app.repositories.generated.restaurants import (
+    GetRestaurantParams,
+    ListRestaurantsParams,
+)
 from app.repositories.queriers import Queriers, get_queriers
 
 router = APIRouter(
@@ -21,7 +25,7 @@ async def list_restaurants(
     data = [
         row
         async for row in q.restaurants.list_restaurants(
-            limit=page_size, offset=(page - 1) * page_size
+            arg=ListRestaurantsParams(limit=page_size, offset=(page - 1) * page_size)
         )
     ]
     return Paginated(
@@ -32,7 +36,7 @@ async def list_restaurants(
 
 @router.get("/{id}", response_model=Restaurant | None)
 async def get_restaurant(id: str, q: Queriers = Depends(get_queriers)):
-    data = await q.restaurants.get_restaurant(id=id)
+    data = await q.restaurants.get_restaurant(arg=GetRestaurantParams(id=id))
 
     if data is None:
         raise HTTPException(

@@ -22,8 +22,8 @@ def get_engine() -> AsyncEngine:
     if engine is None:
         engine = create_async_engine(
             url=settings.DATABASE_URL.encoded_string(),
-            echo=not settings.PRODUCTION,
-            echo_pool=not settings.PRODUCTION,
+            echo=not settings.PROD,
+            echo_pool=not settings.PROD,
             hide_parameters=False,
             plugins=["geoalchemy2"],
         )
