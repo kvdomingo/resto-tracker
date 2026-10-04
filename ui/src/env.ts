@@ -2,7 +2,10 @@ import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
-  server: {},
+  server: {
+    API_URL: z.url(),
+    APP_URL: z.url(),
+  },
 
   /**
    * The prefix that client-side variables must have. This is enforced both at
@@ -15,8 +18,6 @@ export const env = createEnv({
   shared: {
     DEV: z.boolean(),
     PROD: z.boolean(),
-    API_URL: z.url(),
-    APP_URL: z.url(),
   },
 
   /**
