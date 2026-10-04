@@ -16,7 +16,9 @@ tasks:
   up:
     desc: Run the development server
     interactive: true
-    cmd: infisical run --watch -- docker compose up --build --watch --remove-orphans {{ .CLI_ARGS }}
+    cmd: >
+      infisical run --watch --
+      docker compose up --watch --remove-orphans {{ .CLI_ARGS }}
 
   stop:
     desc: Stop containers

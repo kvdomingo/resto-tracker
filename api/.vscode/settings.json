@@ -1,0 +1,9 @@
+{
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "sqlfluff.executablePath": "./.venv/bin/sqlfluff",
+  "sqlfluff.config": "./pyproject.toml",
+  "ty.configurationFile": "./pyproject.toml",
+  "ty.interpreter": "./.venv/bin/python",
+  "ruff.configuration": "./pyproject.toml",
+  "ruff.path": ["./.venv/bin/ruff"]
+}
