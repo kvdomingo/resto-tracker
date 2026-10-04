@@ -61,11 +61,11 @@ class GetUserByIdpIdParams(pydantic.BaseModel):
 UPDATE_USER = """-- name: update_user \\:one
 UPDATE users
 SET
-    idp_user_id = COALESCE(:p2, idp_user_id),
-    email = COALESCE(:p3, email),
-    name = COALESCE(:p4, name)
+  idp_user_id = COALESCE(:p2, idp_user_id),
+  email = COALESCE(:p3, email),
+  name = COALESCE(:p4, name)
 WHERE
-    id = :p1
+  id = :p1
 RETURNING id, created_at, idp_user_id, email, name
 """
 

@@ -34,6 +34,12 @@ async def callback(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     idp_user = res.user
+    idp_user_name = idp_user.name
+    display_name = None
+    if idp_user_name is not None:
+        display_name = (
+            f"{idp_user_name.first_name or ''} {idp_user_name.last_name or ''}".strip()
+        )
 
     db_user = await q.users.get_user_by_idp_id(
         arg=GetUserByIdpIdParams(idp_user_id=idp_user.user_id)
@@ -43,7 +49,7 @@ async def callback(
             arg=CreateUserParams(
                 idp_user_id=idp_user.user_id,
                 email=idp_user.emails[0].email,
-                name=None,
+                name=display_name,
             )
         )
         await q.db.commit()

@@ -14,6 +14,39 @@ from app.models.adapters.restaurants import RestaurantBranches
 from app.repositories.generated import errors, models
 
 
+CREATE_RESTAURANT = """-- name: create_restaurant \\:one
+INSERT INTO restaurants (
+    created_by_id, name, price_tier, tags, branches,
+    instagram_handle, website, menu_url, is_reservation_required
+)
+VALUES (:p1, :p2, :p3, :p4, :p5, :p6, :p7, :p8, :p9)
+RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+"""
+
+
+class CreateRestaurantParams(pydantic.BaseModel):
+    created_by_id: str | None
+    name: str
+    price_tier: int
+    tags: list[str]
+    branches: list[RestaurantBranches]
+    instagram_handle: str | None
+    website: str | None
+    menu_url: str | None
+    is_reservation_required: bool | None
+
+
+DELETE_RESTAURANT = """-- name: delete_restaurant \\:one
+DELETE FROM restaurants
+WHERE id = :p1
+RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+"""
+
+
+class DeleteRestaurantParams(pydantic.BaseModel):
+    id: str
+
+
 GET_RESTAURANT = """-- name: get_restaurant \\:one
 SELECT id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
 FROM restaurants
@@ -37,16 +70,56 @@ class ListRestaurantsParams(pydantic.BaseModel):
     offset: int
 
 
+UPDATE_RESTAURANT = """-- name: update_restaurant \\:one
+UPDATE restaurants
+SET
+    name = COALESCE(:p2, name),
+    price_tier = COALESCE(:p3, price_tier),
+    tags = COALESCE(:p4, tags),
+    branches = COALESCE(:p5, branches),
+    instagram_handle = COALESCE(:p6, instagram_handle),
+    website = COALESCE(:p7, website),
+    menu_url = COALESCE(:p8, menu_url),
+    is_reservation_required = COALESCE(:p9, is_reservation_required)
+WHERE id = :p1
+RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+"""
+
+
+class UpdateRestaurantParams(pydantic.BaseModel):
+    id: str
+    name: str | None
+    price_tier: int | None
+    tags: list[str] | None
+    branches: list[RestaurantBranches] | None
+    instagram_handle: str | None
+    website: str | None
+    menu_url: str | None
+    is_reservation_required: bool | None
+
+
 class QuerierProtocol(Protocol):
+    def create_restaurant(self, arg: CreateRestaurantParams) -> models.Restaurant | None: ...
+
+    def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None: ...
+
     def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None: ...
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> Iterator[models.Restaurant]: ...
 
+    def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None: ...
+
 
 class AsyncQuerierProtocol(Protocol):
+    async def create_restaurant(self, arg: CreateRestaurantParams) -> models.Restaurant | None: ...
+
+    async def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None: ...
+
     async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None: ...
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> AsyncIterator[models.Restaurant]: ...
+
+    async def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None: ...
 
 
 class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
@@ -54,6 +127,54 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
 
     def __init__(self, conn: _ConnT):
         self._conn = conn
+
+    def create_restaurant(self, arg: CreateRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("create_restaurant"):
+            row = self._conn.execute(sqlalchemy.text(CREATE_RESTAURANT), {
+                "p1": arg.created_by_id,
+                "p2": arg.name,
+                "p3": arg.price_tier,
+                "p4": arg.tags,
+                "p5": arg.branches,
+                "p6": arg.instagram_handle,
+                "p7": arg.website,
+                "p8": arg.menu_url,
+                "p9": arg.is_reservation_required,
+            }).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )
+
+    def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("delete_restaurant"):
+            row = self._conn.execute(sqlalchemy.text(DELETE_RESTAURANT), {"p1": arg.id}).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )
 
     def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
         with errors._wrap_errors("get_restaurant"):
@@ -92,12 +213,89 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                     is_reservation_required=cast(bool | None, row[10]),
                 )
 
+    def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("update_restaurant"):
+            row = self._conn.execute(sqlalchemy.text(UPDATE_RESTAURANT), {
+                "p1": arg.id,
+                "p2": arg.name,
+                "p3": arg.price_tier,
+                "p4": arg.tags,
+                "p5": arg.branches,
+                "p6": arg.instagram_handle,
+                "p7": arg.website,
+                "p8": arg.menu_url,
+                "p9": arg.is_reservation_required,
+            }).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )
+
 
 class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
     _conn: _ConnT
 
     def __init__(self, conn: _ConnT):
         self._conn = conn
+
+    async def create_restaurant(self, arg: CreateRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("create_restaurant"):
+            row = (await self._conn.execute(sqlalchemy.text(CREATE_RESTAURANT), {
+                "p1": arg.created_by_id,
+                "p2": arg.name,
+                "p3": arg.price_tier,
+                "p4": arg.tags,
+                "p5": arg.branches,
+                "p6": arg.instagram_handle,
+                "p7": arg.website,
+                "p8": arg.menu_url,
+                "p9": arg.is_reservation_required,
+            })).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )
+
+    async def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("delete_restaurant"):
+            row = (await self._conn.execute(sqlalchemy.text(DELETE_RESTAURANT), {"p1": arg.id})).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )
 
     async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
         with errors._wrap_errors("get_restaurant"):
@@ -135,3 +333,32 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                     menu_url=cast(str | None, row[9]),
                     is_reservation_required=cast(bool | None, row[10]),
                 )
+
+    async def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None:
+        with errors._wrap_errors("update_restaurant"):
+            row = (await self._conn.execute(sqlalchemy.text(UPDATE_RESTAURANT), {
+                "p1": arg.id,
+                "p2": arg.name,
+                "p3": arg.price_tier,
+                "p4": arg.tags,
+                "p5": arg.branches,
+                "p6": arg.instagram_handle,
+                "p7": arg.website,
+                "p8": arg.menu_url,
+                "p9": arg.is_reservation_required,
+            })).first()
+            if row is None:
+                return None
+            return models.Restaurant(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                price_tier=cast(int, row[4]),
+                tags=cast(list[str], row[5]),
+                branches=cast(list[RestaurantBranches], row[6]),
+                instagram_handle=cast(str | None, row[7]),
+                website=cast(str | None, row[8]),
+                menu_url=cast(str | None, row[9]),
+                is_reservation_required=cast(bool | None, row[10]),
+            )

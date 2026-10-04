@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin } from "lucide-react";
+import { UtensilsIcon } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Map as MapComponent, MapMarker, MarkerContent } from "@/components/ui/map.tsx";
@@ -88,7 +88,7 @@ function Page() {
                   latitude={resto.branches.at(0)!.geography!.latitude}
                 >
                   <MarkerContent>
-                    <MapPin
+                    <UtensilsIcon
                       size={36}
                       className={cn("fill-primary transition-transform duration-150", {
                         "scale-110": hoveredResto === resto.id,
