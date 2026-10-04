@@ -3,7 +3,7 @@
 #   sqlc v1.31.1
 import pydantic
 
-import adapters.restaurants
+from app.models.adapters.restaurants import RestaurantBranches
 
 
 class Group(pydantic.BaseModel):
@@ -24,7 +24,7 @@ class Restaurant(pydantic.BaseModel):
     name: str
     price_tier: int
     tags: list[str]
-    branches: list[adapters.restaurants.RestaurantBranches]
+    branches: list[RestaurantBranches]
     instagram_handle: str | None
     website: str | None
     menu_url: str | None

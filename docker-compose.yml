@@ -16,7 +16,15 @@ services:
     ports:
       - 5432:5432
     healthcheck:
-      test: [ 'CMD', 'pg_isready', '-U', '${DATABASE_USER}', '-d', '${DATABASE_NAME}' ]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${DATABASE_USER}",
+          "-d",
+          "${DATABASE_NAME}",
+        ]
       start_period: 10s
       retries: 3
       interval: 20s
@@ -33,7 +41,7 @@ services:
     working_dir: /app
     volumes:
       - ./api:/app
-    profiles: [ admin ]
+    profiles: [admin]
     depends_on:
       db:
         condition: service_healthy
@@ -47,16 +55,18 @@ services:
     environment:
       PYTHON_ENV: development
       PORT: 8000
-      DATABASE_URL: ${DATABASE_URL}
+      INFISICAL_DOMAIN: ${INFISICAL_DOMAIN}
+      INFISICAL_TOKEN: ${INFISICAL_TOKEN}
+      INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
     entrypoint:
       - /bin/bash
       - -euxo
       - pipefail
       - -c
     command:
-      - >
-        uv sync --all-groups --frozen;
-        uv run fastapi dev --host 0.0.0.0 --reload;
+      - |
+        uv sync --all-groups --frozen
+        exec infisical run --watch -- uv run fastapi dev --host 0.0.0.0 --port $${PORT} --reload
     volumes:
       - ./api:/app
       - venv-data:/app/.venv
@@ -70,20 +80,22 @@ services:
           action: restart
 
   ui:
-    image: oven/bun:1
+    build: ./ui
     restart: unless-stopped
-    working_dir: /app
     environment:
-      NODE_ENV: development
+      PORT: 3000
+      INFISICAL_DOMAIN: ${INFISICAL_DOMAIN}
+      INFISICAL_TOKEN: ${INFISICAL_TOKEN}
+      INFISICAL_PROJECT_ID: ${INFISICAL_PROJECT_ID}
     entrypoint:
       - /bin/bash
       - -euxo
       - pipefail
       - -c
     command:
-      - >
-        bun install --frozen-lockfile;
-        exec bun run dev;
+      - |
+        bun install --frozen-lockfile
+        exec infisical run --watch -- bun run dev --host 0.0.0.0 --port $${PORT}
     volumes:
       - ./ui:/app
     ports:

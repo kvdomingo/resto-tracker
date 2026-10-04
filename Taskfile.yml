@@ -1,5 +1,9 @@
 version: "3"
 
+env:
+  INFISICAL_DOMAIN: https://infisical.lab.kvd.studio
+  INFISICAL_PROJECT_ID: 0bba6b44-4ff6-4a99-9591-386731c18063
+
 tasks:
   default:
     cmd:
@@ -17,8 +21,13 @@ tasks:
     desc: Run the development server
     interactive: true
     cmd: >
-      infisical run --watch --
-      docker compose up --watch --remove-orphans {{ .CLI_ARGS }}
+      infisical run --
+      /bin/bash -euxo pipefail -c "
+      INFISICAL_TOKEN=$(infisical user get token --plain)
+      INFISICAL_DOMAIN={{ .INFISICAL_DOMAIN }}
+      INFISICAL_PROJECT_ID={{ .INFISICAL_PROJECT_ID }}
+      exec docker compose up --watch --remove-orphans {{ .CLI_ARGS }}
+      "
 
   stop:
     desc: Stop containers

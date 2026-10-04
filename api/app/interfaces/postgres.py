@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.util import await_only
 
-from settings import settings
+from app.settings import settings
 
 engine: AsyncEngine | None = None
 sessionmaker: async_sessionmaker[AsyncSession] | None = None
@@ -28,9 +28,6 @@ def get_engine() -> AsyncEngine:
             plugins=["geoalchemy2"],
         )
 
-        # asyncpg falls back to text format for composites containing types it
-        # has no binary codec for, and it can't decode composites as text. A
-        # passthrough WKB codec for geography keeps restaurant_branch decodable.
         @event.listens_for(engine.sync_engine, "connect")
         def register_geography_codec(dbapi_connection, _):
             await_only(

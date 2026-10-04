@@ -3,7 +3,7 @@ from geoalchemy2.shape import to_shape
 from pydantic import BaseModel, field_validator, model_validator
 from shapely import Point
 
-from models.geometry import Coordinates
+from app.models.geometry import Coordinates
 
 
 class RestaurantBranches(BaseModel):
@@ -12,7 +12,6 @@ class RestaurantBranches(BaseModel):
 
     @model_validator(mode="before")
     def from_composite(cls, v):
-        # asyncpg decodes composite types to Record, which pydantic can't read
         return dict(v) if hasattr(v, "keys") else v
 
     @field_validator("geography", mode="before")

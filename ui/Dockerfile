@@ -1,10 +1,9 @@
-FROM python:3.14-trixie
+FROM oven/bun:1.4
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
+ENV NODE_ENV=development
 ENV PATH="/bin:${PATH}"
 
-COPY --from=astral/uv:0.12-trixie /usr/local/bin/uv /usr/local/bin/uvx /bin/
 COPY --from=infisical/cli:latest /bin/infisical /bin
 
 SHELL [ "/bin/bash", "-euxo", "pipefail", "-c" ]

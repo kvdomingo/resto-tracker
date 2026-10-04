@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import Theme, get_scalar_api_reference
 
-from routers import restaurants
-from settings import settings
+from app.routers import restaurants
+from app.settings import settings
 
 app = FastAPI(
     title="Resto Tracker",

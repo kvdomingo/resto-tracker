@@ -3,9 +3,7 @@ name = "resto-tracker"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Kenneth V. Domingo", email = "hello@kvd.studio" }
-]
+authors = [{ name = "Kenneth V. Domingo", email = "hello@kvd.studio" }]
 requires-python = "~=3.14.0"
 dependencies = [
     "asyncpg>=0.31.0",
@@ -21,21 +19,23 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.16.2",
-    "sqlfluff[rs]>=4.3.0",
-    "ty>=0.0.69",
-]
+dev = ["ruff>=0.16.2", "sqlfluff[rs]>=4.3.0", "ty>=0.0.69"]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 88
-exclude = ["repositories/generated"]
+extend-exclude = ["generated"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
-    "fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Security"
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Security",
 ]
+
+[tool.ty.src]
+exclude = ["generated/"]
 
 [tool.sqlfluff.core]
 dialect = "postgres"
