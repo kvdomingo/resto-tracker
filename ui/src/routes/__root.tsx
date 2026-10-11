@@ -6,8 +6,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { NuqsAdapter } from "nuqs/adapters/react";
 import type { ReactNode } from "react";
+import z from "zod";
 import { Navbar } from "@/components/navbar";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
@@ -37,6 +37,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
     ],
   }),
+  validateSearch: z.object({
+    page: z.number().int().min(1).default(1),
+    page_size: z.number().int().min(1).max(100).default(10),
+    search: z.string().default(""),
+  }),
   shellComponent: RootDocument,
 });
 
@@ -49,12 +54,10 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <NuqsAdapter>
-          <QueryClientProvider client={queryClient}>
-            <Navbar />
-            {children}
-          </QueryClientProvider>
-        </NuqsAdapter>
+        <QueryClientProvider client={queryClient}>
+          <Navbar />
+          {children}
+        </QueryClientProvider>
 
         <TanStackDevtools
           config={{

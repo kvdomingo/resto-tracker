@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Map as MapComponent, MapMarker, MarkerContent } from "@/components/ui/map.tsx";
 import { Rating } from "@/components/ui/rating";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRootQueryStates } from "@/hooks/use-root-query-states.ts";
 import { $api, PAGINATED_SENTINEL } from "@/lib/api.ts";
 import { INITIAL_BBOX } from "@/lib/constants.ts";
 import { cn } from "@/lib/utils";
@@ -33,8 +32,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Page() {
-  const [{ page, page_size }] = useRootQueryStates();
-  const { bbox } = Route.useSearch();
+  const { bbox, page, page_size } = Route.useSearch();
   const [hoveredResto, setHoveredResto] = useState<string | null>(null);
 
   const { data = PAGINATED_SENTINEL, isLoading } = $api.useQuery(

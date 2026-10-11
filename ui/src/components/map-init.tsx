@@ -13,14 +13,15 @@ export function MapInit() {
       const b = map.getBounds();
       navigate({
         to: "/",
-        search: {
+        search: (prev) => ({
+          ...prev,
           bbox: {
             n: parseFloat(b.getNorth().toFixed(5)),
             e: parseFloat(b.getEast().toFixed(5)),
             w: parseFloat(b.getWest().toFixed(5)),
             s: parseFloat(b.getSouth().toFixed(5)),
           },
-        },
+        }),
         replace: true,
       });
     };

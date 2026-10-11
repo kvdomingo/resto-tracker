@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useDebounceCallback } from "usehooks-ts";
@@ -12,7 +12,6 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu.tsx";
-import { useRootQueryStates } from "@/hooks/use-root-query-states";
 import { $api } from "@/lib/api";
 import { INITIAL_BBOX } from "@/lib/constants";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -28,10 +27,11 @@ import {
 } from "./ui/dropdown-menu";
 
 export function Navbar() {
-  const [{ search }, setState] = useRootQueryStates();
+  const { search } = useSearch({ from: "__root__" });
+  const navigate = useNavigate();
   const [innerSearch, setInnerSearch] = useState(search);
-  const debouncedSetSearch = useDebounceCallback((search) => {
-    setState({ search });
+  const debouncedSetSearch = useDebounceCallback((search: string) => {
+    navigate({ to: ".", search: (prev) => ({ ...prev, search }), replace: true });
   }, 300);
 
   const { data: loginUrl } = $api.useQuery("get", "/api/auth/login", {
