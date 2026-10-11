@@ -1,268 +1,296 @@
 ## 1. Repository and local stack
 
-- [ ] 1.1 Create the layout from `design.md`: `api/`, `ui/`, `infra/`,
-      root `sqlc.yaml`, `Dockerfile`, `docker-compose.yaml`, `Taskfile.yaml`,
-      `.gitignore`, `.env.example`
-- [ ] 1.2 Write the root `Taskfile.yaml` with `generate` (depends on
+- [x] 1.1 Create the layout from `design.md`: `api/`, `ui/`,
+      `infra/helm/resto-tracker/`, root `Taskfile.yml`, `docker-compose.yml`,
+      `mise.toml`, `.pre-commit-config.yaml` (prek), `.gitignore`,
+      `.env.example`, `api/sqlc.yaml`
+- [x] 1.2 Taskfile workflow targets: `setup`, `up` (Infisical-wrapped
+      `docker compose up --watch`), `stop`/`logs`/`restart`/`down`/`clean`/
+      `exec`, `pgcli`, `makemigrations`, `migrate`, `unmigrate`,
+      `load-fixtures`
+- [ ] 1.3 Add the missing Taskfile targets: `generate` (depends on
       `generate:sqlc`, `generate:openapi`, `generate:types`), `build-local`,
-      `up`, `migrate`, and `test`
-- [ ] 1.3 Add `docker-compose.yaml` with a `postgres:18` service (named volume,
-      healthcheck) and a one-shot `migrate` service running dbmate that the
-      backend waits on; bind-mount both source trees and install the `task`
-      binary in both dev images
-- [ ] 1.4 Add the `develop.watch` blocks from `design.md`: backend watches
-      `app/routers` and `app/schemas` with `sync+exec` →
-      `task generate:openapi`, frontend watches `api/openapi.json` with
-      `sync+exec` → `task generate:types`, plus `rebuild` on each dependency
-      manifest
-- [ ] 1.5 Verify the chain end to end — edit a Pydantic response model, confirm
-      `openapi.json` then `schema.d.ts` regenerate on the host without a manual
-      command, and that Vite HMR picks up the new types
-- [ ] 1.6 Write `README.md` setup steps starting with creating a Stytch test
-      project and filling `.env` — the app cannot be signed into without it
+      and `test`
+- [x] 1.4 `docker-compose.yml`: `db` on `ghcr.io/kvdomingo/postgresql-pig:18`
+      (named volume, healthcheck), a one-shot dbmate `migrations` service in the
+      `admin` profile, and `api`/`ui` dev services with bind mounts, Infisical
+      injection, and restart-on-dependency-change watches
+- [ ] 1.5 Add codegen-on-save `develop.watch` hooks: `api` watches
+      `app/routers` and `app/models` with `sync+exec` → `task
+      generate:openapi`, and `ui` watches `api/openapi.json` with `sync+exec` →
+      `task generate:types`. Verify that editing a response model regenerates
+      `generated.d.ts` on the host and Vite HMR picks it up
+- [ ] 1.6 Write `README.md` setup steps: Infisical access, a Stytch test project
+      with an OAuth provider and redirect URL, then `task migrate`,
+      `task load-fixtures`, `task up`
 
 ## 2. Database schema
 
-- [ ] 2.1 Migration: `users` (`id uuid pk`,
-      `stytch_user_id text unique not null`, `email text not null`,
-      `created_at`)
-- [ ] 2.2 Migration: `restaurants` (`id`, `owner_id -> users on delete cascade`,
-      `group_id uuid` reserved and always NULL, `name`, `status`,
-      `tags text[] not null`, optional
-      `image_url`/`website_url`/`instagram_url`/`menu_url`, timestamps)
-- [ ] 2.3 Add to `restaurants`: `CHECK (length(trim(name)) between 1 and 200)`,
-      `CHECK (cardinality(tags) >= 1)`, a `status` enum or
-      `CHECK (status in ('tried','want_to_try'))` defaulting to `want_to_try`, a
-      GIN index on `tags`, and an index on `(owner_id, created_at desc)`
-- [ ] 2.4 Migration: `restaurant_locations` (`id`,
-      `restaurant_id -> restaurants on delete cascade`, `label`, `lat`, `lon`,
-      `ordinal`) with `unique (restaurant_id, ordinal)`,
-      `CHECK (lat between -90 and 90)`, `CHECK (lon between -180 and 180)`,
-      `CHECK (length(trim(label)) >= 1)`
-- [ ] 2.5 Verify `dbmate up` then `dbmate rollback` runs clean against an empty
-      database
+- [x] 2.1 Initial migration: `users` (ULID `id`, unique `idp_user_id`, unique
+      citext `email`, `name`), `restaurants` (`created_by_id` `ON DELETE SET
+      NULL`, `price_tier` 1–5, `instagram_handle`, `website`, `menu_url`,
+      `is_reservation_required`), `tags` (unique citext `name`),
+      `restaurant_tags`, `restaurant_branches` (`GEOGRAPHY(POINT)` + GiST),
+      `restaurant_visits`, `reviews`, `groups`, `group_memberships`
+- [x] 2.2 Migration: `restaurant_branch_list` JSONB domain for the typed branch
+      aggregate
+- [x] 2.3 Fixtures: system user and sample restaurants with branches and tags,
+      loaded by `task load-fixtures`
+- [ ] 2.4 Migration: give `restaurant_visits` a primary key
+      `(user_id, restaurant_id)`, `created_at TIMESTAMPTZ NOT NULL DEFAULT
+      now()`, and `ON DELETE CASCADE` on both FKs. Without the cascade,
+      deleting a restaurant or user that has visits fails today
+- [ ] 2.5 Migration: `CHECK (length(trim(name)) BETWEEN 1 AND 200)` on
+      `restaurants`, `CHECK (length(trim(label)) >= 1)` on
+      `restaurant_branches`, `CHECK (length(trim(content)) >= 1)` on `reviews`,
+      and indexes on `restaurants (created_by_id)`, `reviews (restaurant_id)`,
+      and `restaurant_visits (user_id, created_at DESC)`
+- [ ] 2.6 Verify `dbmate up` then `dbmate rollback` runs clean against an empty
+      database, and `schema.sql` is committed with each migration
 
 ## 3. Query layer (sqlc)
 
-- [ ] 3.1 Configure `sqlc.yaml` for `sqlc-gen-python` with the asyncpg driver,
-      schema pointed at `api/sql/migrations/`, queries at
-      `api/sql/queries.sql`, output to `api/generated/`
-- [ ] 3.2 Write the user queries: upsert-by-`stytch_user_id` returning the row,
-      and get-by-id
-- [ ] 3.3 Write the restaurant write queries: insert, update, delete — each
-      scoped `WHERE owner_id = $1 AND group_id IS NULL` and returning the
-      affected row so a miss is distinguishable from a hit
-- [ ] 3.4 Write the location queries: bulk insert for one restaurant,
-      delete-all-for-restaurant, list-by-restaurant ordered by `ordinal`
-- [ ] 3.5 Write the read queries: restaurant detail by id, list with optional
-      status / tag / free-text filters (`tags @> ARRAY[$1]`, `ILIKE` over name
-      and location labels), and distinct tags via `unnest` — all owner-scoped
-- [ ] 3.6 Run `task generate:sqlc`, commit the generated module, and add a CI
-      check that regenerating produces no diff
+- [x] 3.1 Configure `api/sqlc.yaml` for the `kvdomingo/sqlc-gen-python` wasm
+      plugin: schema from the dbmate `schema.sql`, queries from
+      `app/repositories/sql/queries/`, output to `app/repositories/generated/`,
+      pydantic models, async querier, and overrides for citext and
+      `restaurant_branch_list`
+- [x] 3.2 User queries: get by id, get by `idp_user_id`, create, update, delete
+- [ ] 3.3 Replace get-then-create in the callback with an upsert on
+      `idp_user_id` (`ON CONFLICT ... DO UPDATE SET email, name RETURNING *`)
+- [x] 3.4 Restaurant queries: get, list, list-in-bbox with aggregated branches,
+      create, partial update, delete
+- [ ] 3.5 Scope restaurant update/delete to `created_by_id = @user_id`, and let
+      the update clear optional fields (the `COALESCE` pattern cannot set a
+      column to NULL)
+- [ ] 3.6 Branch queries: bulk insert for a restaurant, delete all for a
+      restaurant. Extend the detail query with branches, tags, and rating summary
+- [ ] 3.7 Tag queries: get-or-create by name, replace a restaurant's tag set,
+      list all tags. Add tags and rating summary to the list-in-bbox rows
+- [ ] 3.8 Add `q` (ILIKE over name and branch labels) and `tag` filters to
+      list-in-bbox, order newest first (`ORDER BY r.id DESC`), and return a
+      total count
+- [ ] 3.9 Visit queries: upsert a status, delete, get the viewer's status for
+      one restaurant, and list a user's visits with status/tag/`q` filters,
+      newest first
+- [ ] 3.10 Review queries: create, list for a restaurant, update and delete
+      scoped to `author_id = @user_id`
+- [ ] 3.11 Add a CI check that `sqlc generate` after migrations produces no diff
 
 ## 4. Backend foundation
 
-- [ ] 4.1 Set up the FastAPI project (`pyproject.toml`, `uv`/`pip` lock,
-      `fastapi`, `uvicorn`, `asyncpg`, `stytch`, `pydantic-settings`) and a
-      `Settings` class reading `DATABASE_URL`, `STYTCH_PROJECT_ID`,
-      `STYTCH_SECRET`, `CORS_ORIGINS`
-- [ ] 4.2 Add an asyncpg pool on lifespan startup/shutdown and a request-scoped
-      connection dependency, plus a transaction helper for multi-statement
-      writes
-- [ ] 4.3 Add `/healthz` returning 200 only when the pool can reach Postgres,
-      for K8s probes
-- [ ] 4.4 Configure CORS for the local Vite dev origin only — production is
-      same-origin and needs none
-- [ ] 4.5 Mount the built frontend: `StaticFiles` over `ui/dist` with an
-      SPA catch-all returning `index.html`, registered after the `/api` routes
-      so unknown API paths still return JSON 404; hashed assets get a long
-      `max-age`, `index.html` gets `no-store`
+- [x] 4.1 FastAPI project with uv (`pyproject.toml`, ruff, ty, sqlfluff) and
+      `Settings` reading `PYTHON_ENV`, `SECRET_KEY`, `DATABASE_URL` (coerced to
+      `postgresql+asyncpg`), the Stytch project ID/public token/secret,
+      `STYTCH_CALLBACK_URL`, and `APP_URL`
+- [x] 4.2 SQLAlchemy async engine with the geoalchemy2 plugin and a
+      pass-through `geography` codec, plus a request-scoped `Queriers`
+      dependency
+- [x] 4.3 `/api/health`, Scalar docs at `/api/docs`, and routers auto-registered
+      under `/api`
+- [x] 4.4 Serve the built frontend in production with
+      `app.frontend("/", directory="static", fallback="index.html")` after the
+      `/api` routers
+- [ ] 4.5 Make `/api/health` check database reachability so K8s probes
+      reflect it
+- [ ] 4.6 Make the engine's `pool_size` and `max_overflow` settings, defaulting
+      to 10 connections per pod in total
+- [ ] 4.7 Verify that an unknown `/api/*` path returns JSON 404 rather than
+      `index.html`, hashed assets get a long `max-age`, and `index.html` gets
+      `no-store`
 
 ## 5. Authentication
 
-- [ ] 5.1 Implement local Stytch session-JWT verification: fetch and cache JWKS,
-      verify signature/issuer/audience/expiry, refresh JWKS on unknown key id
-- [ ] 5.2 Implement the `current_user` dependency — extract the bearer token,
-      verify, upsert the `users` row on first sight, return the local user
-- [ ] 5.3 Map failure modes per `specs/user-auth`: missing token → 401,
-      invalid/expired → 401, JWKS unreachable → 503
-- [ ] 5.4 Implement `GET /api/me` and a sign-out path that revokes the session
-      at Stytch
-- [ ] 5.5 Tests: valid session, missing token, expired token, tampered
-      signature, Stytch unreachable, and first-sign-in provisioning being
-      idempotent under two concurrent requests
+- [x] 5.1 Stytch client singleton and `GET /api/auth/login` returning the OAuth
+      start URL
+- [x] 5.2 `GET /api/auth/callback`: authenticate the OAuth token, provision the
+      local user, store `session_token`/`session_jwt` in the signed cookie
+      session, 303 to `APP_URL`
+- [x] 5.3 `StytchAuthBackend` verifying the session per request and attaching
+      `AppUser` with the `authenticated` scope plus Stytch roles, and `get_user`
+      raising 401/403
+- [x] 5.4 `GET /api/auth/logout` (revoke at Stytch, clear the cookie, 303) and
+      `GET /api/auth/me`
+- [ ] 5.5 On a failed or cancelled OAuth callback, redirect to `APP_URL` with an
+      error indicator the UI can show, instead of a bare 400/500, and cover
+      the case where the response is neither success nor a classified error
+- [ ] 5.6 Tell a Stytch rejection (clear cookie, continue anonymous) apart from
+      a Stytch outage (keep the cookie, 503 on endpoints that need a user)
+- [ ] 5.7 Tests: valid session, no session, rejected session, Stytch
+      unreachable, concurrent first sign-in creating one user, sign-out
+      invalidating the session
 
 ## 6. Restaurant API
 
-- [ ] 6.1 Pydantic schemas for restaurant create/update/read and location,
-      enforcing name length, ≥1 location, ≥1 tag, tag length ≤ 50, coordinate
-      ranges, and `http`/`https`-only URLs (rejecting `javascript:`)
-- [ ] 6.2 Tag normalisation helper — trim, lowercase, dedupe, preserve
-      first-seen order — applied before every write
-- [ ] 6.3 `POST /api/restaurants` — insert restaurant and its locations in one
-      transaction, return 201 with the stored entity
-- [ ] 6.4 `GET /api/restaurants/{id}` — owner-scoped detail with locations in
-      `ordinal` order, tags, set optional fields, and status; 404 for anything
-      not owned
-- [ ] 6.5 `PATCH /api/restaurants/{id}` — partial update including status; when
-      locations are supplied, delete-and-reinsert inside one transaction;
-      distinguish "clear this optional field" from "leave it alone"
-- [ ] 6.6 `DELETE /api/restaurants/{id}` — 204 on success, 404 on miss; confirm
-      cascade removes locations
-- [ ] 6.7 `GET /api/restaurants` — list with `status`, `tag`, and `q` filters
-      combining as AND, default ordering newest-first, returning the list-row
-      fields from `specs/personal-list`
-- [ ] 6.8 `GET /api/tags` — the signed-in user's distinct tags
-- [ ] 6.9 Tests covering every `specs/restaurant-catalog` and
-      `specs/personal-list` scenario, including each 422 case; assert real
-      payloads match each route's declared `response_model` so an undeclared or
-      drifted response fails here
-- [ ] 6.10 Ownership isolation test: for every endpoint taking an `{id}`, a
-      second user's request returns 404 and leaves the record untouched
-- [ ] 6.11 Give every route an explicit `response_model` and operation id, then
-      add a `task generate:openapi` script that imports the app, calls
-      `app.openapi()`, and writes `openapi.json` without starting a server
+- [x] 6.1 `GET /api/restaurants`: public, bbox (`n`/`e`/`s`/`w` validated),
+      paginated (`page`, `page_size` ≤ 100), each row with its branches and
+      coordinates
+- [x] 6.2 `GET /api/restaurants/{id}` returning 404 on a miss
+- [x] 6.3 `POST`/`PATCH`/`DELETE /api/restaurants` route stubs over the
+      generated queries, with `POST` requiring sign-in and setting
+      `created_by_id` from the session
+- [ ] 6.4 Hand-written Pydantic request models replacing the sqlc params as
+      request bodies: name 1–200 after trim, price tier 1–5, ≥ 1 branch with a
+      non-blank label and valid coordinates, ≥ 1 tag of ≤ 50 characters,
+      `http`/`https`-only URLs, an optional initial `status`. No `id` or
+      `created_by_id` in the body
+- [ ] 6.5 Tag normalisation helper: trim and dedupe case-insensitively,
+      preserving first-seen order, applied before every write
+- [ ] 6.6 `POST /api/restaurants`: insert the restaurant, branches, tags, and
+      optional status in one transaction, and return 201 with the stored entity
+- [ ] 6.7 `PATCH /api/restaurants/{id}`: require sign-in and creator only (403
+      otherwise, 404 on a miss). When branches or tags are supplied, replace
+      them in the same transaction. Distinguish "clear this optional field"
+      from "leave it alone"
+- [ ] 6.8 `DELETE /api/restaurants/{id}`: require sign-in and creator only, 204
+      on success, 404 on a miss. Confirm that branches, tags, reviews, and
+      visits go with it
+- [ ] 6.9 `GET /api/restaurants/{id}`: include branches, tags, rating summary,
+      and the viewer's status when signed in
+- [ ] 6.10 `GET /api/restaurants`: add `q` and `tag` filters, newest-first
+      ordering, `total_count`, and tags plus rating summary on each row.
+      `GET /api/tags` lists all tags
+- [ ] 6.11 Personal list: `PUT`/`DELETE /api/restaurants/{id}/status` and
+      `GET /api/me/restaurants` with `status`, `tag`, and `q` filters
+- [ ] 6.12 Reviews: `GET`/`POST /api/restaurants/{id}/reviews` and
+      `PATCH`/`DELETE /api/reviews/{id}` (author only). Omit the author on
+      anonymous reviews unless the reader is the author
+- [ ] 6.13 Tests covering every `specs/restaurant-catalog` and
+      `specs/personal-list` scenario, including each 422 case, and asserting
+      that real payloads match each route's declared `response_model`
+- [ ] 6.14 Access-rule tests from `specs/user-auth`: anonymous writes return
+      401, non-creator restaurant edits/deletes and non-author review
+      edits/deletes return 403 and leave data untouched, and one user's list
+      never shows another's statuses
+- [ ] 6.15 Give every route an explicit `response_model` and operation id, then
+      add `task generate:openapi`, which imports the app and writes
+      `openapi.json` without starting a server
 
 ## 7. Frontend foundation
 
-- [ ] 7.1 Scaffold Vite + React + TypeScript; add Tailwind, initialise
-      shadcn/ui, add TanStack Query and TanStack Form
-- [ ] 7.2 Add the Stytch React provider, a login screen, and a route guard that
-      sends unauthenticated visitors to sign-in
-- [ ] 7.3 Wire `openapi-typescript` into `task generate:types`: read the
-      `openapi.json` from 6.11, emit `ui/src/api/schema.d.ts`, commit it,
-      and extend the CI freshness check to cover it
-- [ ] 7.4 Build the API client with `openapi-fetch` rooted at the relative path
-      `/api` (same-origin in production, Vite dev-server proxy locally), with a
-      middleware that attaches the Stytch session JWT as `Authorization: Bearer`
-      and, on 401, clears session state and redirects to sign-in
-- [ ] 7.5 Wrap that client with `openapi-react-query` and expose the resulting
-      typed hooks as the only way the app talks to the API — no hand-written
-      fetch calls
-- [ ] 7.6 Set up the app shell — header, sign-out, and the routes for list,
-      detail, and add/edit
+- [x] 7.1 Scaffold TanStack Start with file-based Router, Tailwind v4,
+      shadcn/ui, TanStack Query/Form, biome, bun, and the React Compiler
+- [x] 7.2 `$api` client via `openapi-fetch` + `openapi-react-query` with
+      cookie credentials, typed from `src/types/generated.d.ts`
+      (`generate-api-types`)
+- [x] 7.3 nitro dev proxy forwarding `/api/**` to the `api` container, keeping
+      dev same-origin
+- [x] 7.4 Navbar: home link, debounced search box held in URL state, sign-in
+      link from `/api/auth/login`, avatar menu with sign-out, "add" menu when
+      signed in
+- [ ] 7.5 Configure TanStack Start SPA mode so `vite build` emits static assets
+      plus an `index.html` shell for FastAPI to serve, and drop the
+      SSR-specific wiring (`react-router-ssr-query`) if SPA mode makes it
+      redundant
+- [ ] 7.6 Point `generate:types` at the offline `openapi.json` from 6.15 and
+      extend the CI freshness check to `generated.d.ts`
+- [ ] 7.7 Handle 401: treat `me` as signed out, guard the add/edit and "my list"
+      routes, and show the sign-in error from 5.5
+- [ ] 7.8 Remove scaffold leftovers (`db-collections` demo messages collection)
 
 ## 8. Frontend features
 
-- [ ] 8.1 Restaurant list view: cards showing name, status, tags, first location
-      label, and image when set; empty state prompting the first restaurant
-- [ ] 8.2 Filter bar — status toggle, tag chips from `/api/tags`, and a search
-      box — with state held in URL search params and used as the query key
-- [ ] 8.3 Distinguish "no restaurants yet" from "no matches for these filters"
-      in the empty state
-- [ ] 8.4 Install mapcn pointed at the OpenFreeMap style URL (held in config,
-      not hardcoded) and build the location picker: drop/drag a pin, type a
-      label, add and remove locations, reorder preserved on save. If mapcn lacks
-      pin-dropping, fall back to MapLibre GL per `design.md`
-- [ ] 8.5 Add/edit form with TanStack Form and Zod schemas mirroring the backend
-      rules; surface server 422 field errors alongside client-side ones
-- [ ] 8.6 Restaurant detail view: all locations as pins on a map, tags, and the
-      optional links rendered only when set
-- [ ] 8.7 Status toggle on both list and detail, with an optimistic update that
-      rolls back on error
+- [x] 8.1 Home: mapcn map plus restaurant cards for the current bbox. The bbox
+      is a validated search param updated on map move, and hover is synced
+      between card and pin
+- [ ] 8.2 Wire the navbar search and a tag filter (from `/api/tags`) into the
+      list query, and add pagination controls
+- [ ] 8.3 Empty states: "nothing in this area" vs "no matches for these filters"
+- [ ] 8.4 Restaurant detail page (currently a placeholder): branches on a map,
+      tags, price tier, links, reservation flag, rating summary and reviews,
+      the viewer's status toggle, and edit/delete for the creator only
+- [ ] 8.5 Add/edit form with TanStack Form and Zod mirroring the backend rules:
+      branch picker (drop/drag a pin, label, add/remove), tag input suggesting
+      existing tags, optional initial status, server 422 errors shown alongside
+      client ones
+- [ ] 8.6 "My list" view: the user's restaurants filtered by status/tag/search
+      in URL state, with a status toggle using an optimistic update that rolls
+      back on error
+- [ ] 8.7 Reviews: an add-review dialog (from the navbar menu and the detail
+      page), and card/detail ratings fed from the real rating summary (the
+      card `Rating` is static today)
 - [ ] 8.8 Delete with a confirmation dialog and cache invalidation on success
 
 ## 9. Container and deployment
 
-- [ ] 9.1 Single multi-stage `Dockerfile`: a Node stage running `vite build`
-      with the Stytch public token as a build arg, then a Python runtime stage
-      that copies `dist/` in, installs the backend, adds the dbmate binary for
-      the migration initContainer, and runs as non-root
-- [ ] 9.2 Add a `task build-local` target that builds the image and runs it
-      against the compose Postgres, so the production serving path is exercised
-      locally
-- [ ] 9.3 Generate the chart with `helm create resto-tracker` in `infra/` — do
-      not hand-write the scaffold; then strip what is unused (the NOTES/test
-      scaffolding as appropriate) and keep the generated `_helpers.tpl`,
-      Deployment, Service, Ingress, ServiceAccount, and HPA
-- [ ] 9.4 Add the migration initContainer to the generated Deployment: same
-      image, runs `dbmate up`, requests `cpu: 50m` / `memory: 64Mi`, limits
-      `cpu: 500m` / `memory: 256Mi`
-- [ ] 9.5 Add `templates/secret.yaml` — an `InfisicalSecret` modelled on
+- [ ] 9.1 Root multi-stage `Dockerfile`: a bun stage builds the SPA, then a
+      Python stage installs `api/` with uv, copies the bundle into `static/`,
+      adds the dbmate binary, and runs uvicorn as non-root.
+      `api/Dockerfile` and `ui/Dockerfile` remain dev images
+- [ ] 9.2 `task build-local`: build the image and run it against the compose
+      Postgres with Infisical-injected env
+- [x] 9.3 Generate the chart with `helm create` at `infra/helm/resto-tracker/`
+- [ ] 9.4 Strip unused scaffold (tests, and whichever of Ingress/HTTPRoute the
+      homelab does not use), and set chart metadata
+- [ ] 9.5 Add the migration initContainer: same image, runs `dbmate up` with
+      `DBMATE_MIGRATIONS_DIR`/`DBMATE_SCHEMA_FILE` pointed at the image's SQL
+      paths, requests `cpu: 50m` / `memory: 64Mi`, limits `cpu: 500m` /
+      `memory: 256Mi`
+- [ ] 9.6 Add `templates/secret.yaml`: an `InfisicalSecret` modelled on
       `~/homelab/lubelogger/templates/secret.yaml`, scoped to the
-      `resto-tracker` project, as a `pre-install` hook at weight `-10` (the
-      lowest in the chart, so it is created before every other hook; anything
-      added later takes a strictly greater weight) managing
-      `<fullname>-secrets`; consume it from the Deployment via
-      `envFrom.secretRef` and expose the identity ID, project slug, and env slug
-      as chart values
-- [ ] 9.6 Set `image.repository: ghcr.io/kvdomingo/resto-tracker`,
-      `image.tag: latest`, `imagePullPolicy: Always`, and add the Keel
+      `resto-tracker` project, as a `pre-install` hook at weight `-10`,
+      managing `<fullname>-secrets`. Consume it via `envFrom.secretRef` and
+      expose the identity ID, project slug, and env slug as values
+- [ ] 9.7 Set `image.repository: ghcr.io/kvdomingo/resto-tracker`,
+      `image.tag: latest`, `imagePullPolicy: Always`, and the Keel
       `deploymentAnnotations` (`keel.sh/policy: force`, `keel.sh/trigger: poll`,
-      `keel.sh/match-tag: "true"` — no `pollSchedule`, the cluster default
-      applies) wired through `.Values.deploymentAnnotations` as in
+      `keel.sh/match-tag: "true"`) wired through
+      `.Values.deploymentAnnotations` as in
       `~/homelab/lubelogger/templates/deployment.yaml`
-- [ ] 9.7 Add liveness/readiness probes on `/healthz`
-- [ ] 9.8 Set app resources from `design.md`: requests `cpu: 100m` /
-      `memory: 256Mi`, limits `cpu: 1000m` / `memory: 512Mi`, all four exposed
-      as chart values
-- [ ] 9.9 Configure the generated HPA — `minReplicas: 2`, `maxReplicas: 5`,
-      target 70% CPU utilisation — and set the Deployment's
-      `strategy.rollingUpdate.maxUnavailable: 0` so rollouts do not contend with
-      the PDB
-- [ ] 9.10 Add the PodDisruptionBudget with `minAvailable: 1`; confirm it is
-      below the HPA floor so a node drain can still evict
-- [ ] 9.11 Cap the asyncpg pool at 10 connections per pod so the HPA ceiling
-      stays inside the managed instance's connection limit, and expose it as a
-      chart value alongside `maxReplicas`
+- [ ] 9.8 Liveness/readiness probes on `/api/health`, and the app resources
+      from `design.md` as values
+- [ ] 9.9 Configure the HPA (`minReplicas: 2`, `maxReplicas: 5`, 70% CPU) and
+      set `strategy.rollingUpdate.maxUnavailable: 0`
+- [ ] 9.10 Add the PodDisruptionBudget with `minAvailable: 1`
+- [ ] 9.11 Expose the DB pool size from 4.6 as a chart value next to
+      `maxReplicas`
 - [ ] 9.12 Make sure every value that might need changing under pressure is a
-      real entry in `infra/values.yaml` — image tag, replica bounds, resources,
-      ingress host, Infisical scope — since `--set` does not exist under Argo CD
-- [ ] 9.13 Create the Argo CD Application pointing at `infra/` in this
-      repository (following whatever convention the homelab uses for where
-      Application manifests live) and confirm Argo renders the chart and reaches
-      Synced/Healthy
-- [ ] 9.14 Observe which field Keel actually patches to force a rollout in this
-      cluster, then add a scoped `ignoreDifferences` for exactly that field so
-      Argo's self-heal stops reverting Keel — do not guess the path from
-      documentation
-- [ ] 9.15 Verify the rendered output locally with `helm template` (a developer
-      check, not a deploy path): confirm the HPA, PDB, initContainer,
-      `InfisicalSecret` hook annotations and weight, and Keel annotations all
-      appear as intended
+      real entry in `values.yaml`: image tag, replica bounds, resources,
+      ingress host, Infisical scope, pool size
+- [ ] 9.13 Create the Argo CD Application pointing at the chart and confirm it
+      reaches Synced/Healthy
+- [ ] 9.14 Observe which field Keel actually patches to force a rollout, then
+      add a scoped `ignoreDifferences` for exactly that field. Do not guess the
+      path from documentation
+- [ ] 9.15 Verify `helm template` output: HPA, PDB, initContainer,
+      `InfisicalSecret` hook annotations and weight, Keel annotations
 
 ## 10. CI/CD
 
-- [ ] 10.1 Pull-request workflow: run backend tests, frontend typecheck and
-      build, and the codegen freshness check (regenerate sqlc output and
-      `schema.d.ts`, fail on any diff)
-- [ ] 10.2 Push-to-`main` workflow: build the image with the Stytch public token
-      as a build arg, and push `ghcr.io/kvdomingo/resto-tracker` as both
-      `latest` and `sha-<commit>`, authenticating with `GITHUB_TOKEN`
-- [ ] 10.3 Gate the push on the same checks as 10.1 so nothing reaches `latest`
-      with stale generated code
-- [ ] 10.4 Confirm no cluster credentials exist anywhere in the workflows, and
-      that CI never commits back to `infra/` — code reaches the cluster via Keel
-      pulling the image, config via Argo pulling git, and the two paths stay
-      separate
+- [ ] 10.1 Pull-request workflow: backend tests, ruff/ty/sqlfluff, biome and
+      `tsc`, a UI build, and the codegen freshness check (apply migrations to a
+      scratch Postgres, regenerate sqlc and `generated.d.ts`, fail on any diff)
+- [ ] 10.2 Push-to-`main` workflow: build the image and push
+      `ghcr.io/kvdomingo/resto-tracker` as `latest` and `sha-<commit>` with
+      `GITHUB_TOKEN`
+- [ ] 10.3 Gate the push on the same checks as 10.1
+- [ ] 10.4 Confirm no cluster credentials exist in any workflow and that CI
+      never commits to `infra/`
 
 ## 11. Verification
 
-- [ ] 11.1 Full local run from a clean checkout: `docker compose up` →
-      migrations apply → sign in with a Stytch test user → add a restaurant with
-      two locations and three tags → filter by tag → mark tried → delete
-- [ ] 11.2 Repeat the same walkthrough against `task build-local`, confirming
-      the served bundle loads, a deep link like `/restaurants/{id}` refreshes
-      without a 404, and an unknown `/api/*` path returns JSON rather than the
-      HTML shell
+- [ ] 11.1 Full local run from a clean checkout: `task migrate` →
+      `task load-fixtures` → `task up` → browse the map anonymously → sign in
+      via OAuth and confirm the first page after the redirect already shows you
+      as signed in → add a restaurant with two branches and three tags → mark it
+      want-to-try, then tried → review it → filter by tag → delete it
+- [ ] 11.2 Repeat against `task build-local`, confirming the served bundle
+      loads, a deep link like `/restaurants/{id}` refreshes without a 404, and
+      an unknown `/api/*` path returns JSON
 - [ ] 11.3 Confirm every scenario in `specs/user-auth`,
-      `specs/restaurant-catalog`, and `specs/personal-list` has a corresponding
-      passing test
-- [ ] 11.4 Confirm `task generate` is idempotent on a clean tree — both the sqlc
-      output and `schema.d.ts` regenerate byte-identical — and that a deliberate
-      field rename in a Pydantic model breaks `tsc` rather than passing silently
-- [ ] 11.5 Record actual CPU and memory usage of the app container during the
-      11.2 walkthrough and reconcile against the requests in 9.8; adjust the
-      chart values if they are off by more than roughly 2×
-- [ ] 11.6 Confirm the initContainer path: two replicas starting simultaneously
-      against an unmigrated database both come up, with dbmate's advisory lock
-      serialising them and only one set of migrations applied
-- [ ] 11.7 Confirm Keel has adopted the Deployment — annotations present,
-      polling, and a pushed image actually triggers a rollout
-- [ ] 11.8 Confirm Argo and Keel coexist: after a Keel-triggered rollout, the
-      Application returns to Synced/Healthy and the new pods are still running
-      some minutes later, i.e. self-heal did not revert them
-- [ ] 11.9 Confirm the incident path works: commit `image.tag: sha-<known-good>`
-      to `infra/values.yaml`, watch Argo pin it, then revert and confirm Keel
-      resumes
-- [ ] 11.10 Run `openspec validate --strict` on this change
+      `specs/restaurant-catalog`, and `specs/personal-list` has a passing test
+- [ ] 11.4 Confirm `task generate` is idempotent on a clean tree and that a
+      deliberate field rename in a Pydantic model breaks `tsc`
+- [ ] 11.5 Record the app container's CPU and memory during 11.2 and reconcile
+      against 9.8
+- [ ] 11.6 Confirm two replicas starting together against an unmigrated
+      database both come up, with dbmate's advisory lock serialising them
+- [ ] 11.7 Confirm Keel has adopted the Deployment and a pushed image triggers a
+      rollout
+- [ ] 11.8 Confirm that after a Keel rollout the Application returns to
+      Synced/Healthy and self-heal does not revert the new pods
+- [ ] 11.9 Confirm the incident path: commit `image.tag: sha-<known-good>`,
+      watch Argo pin it, revert, and confirm Keel resumes
+- [ ] 11.10 Confirm the managed Postgres target has `postgis`, `pg_idkit`,
+      `citext`, and `pg_trgm`
+- [ ] 11.11 Run `openspec validate --strict` on this change
