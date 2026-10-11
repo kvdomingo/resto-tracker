@@ -84,9 +84,9 @@ SELECT
     ORDER BY b.id
   )\\:\\:restaurant_branch_list AS branches
 FROM restaurants r
-JOIN restaurant_branches b ON r.id = b.restaurant_id
+  JOIN restaurant_branches b ON r.id = b.restaurant_id
 WHERE
-  b.geography && ST_MakeEnvelope(:p1\\:\\:FLOAT, :p2\\:\\:FLOAT, :p3\\:\\:FLOAT, :p4\\:\\:FLOAT, 4326)
+  b.geography && ST_MAKEENVELOPE(:p1\\:\\:float, :p2\\:\\:float, :p3\\:\\:float, :p4\\:\\:float, 4326)
 GROUP BY r.id
 ORDER BY r.id
 LIMIT :p6 OFFSET :p5

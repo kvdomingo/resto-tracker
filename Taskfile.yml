@@ -59,19 +59,28 @@ tasks:
     interactive: true
     cmd: pgcli postgres://postgres:postgres@localhost:5432/postgres
 
-  makemigrations:
+  db:generate:
+    desc: Generate database types
+    dir: api
+    cmd: infisical run -- sqlc generate
+
+  db:status:
+    desc: Show migrations status
+    cmd: infisical run -- docker compose run --rm -it migrations status
+
+  db:makemigrations:
     desc: Create a migration file
     cmd: infisical run -- dbmate new {{ .CLI_ARGS }}
 
-  migrate:
+  db:migrate:
     desc: Apply migrations
     cmd: infisical run -- docker compose run --rm -it migrations up
 
-  unmigrate:
+  db:unmigrate:
     desc: Rollback migration
     cmd: infisical run -- docker compose run --rm -it migrations down
 
-  load-fixtures:
+  db:fixtures:
     desc: Load database fixtures
     cmd: |
       for f in api/app/repositories/sql/fixtures/*.sql; do

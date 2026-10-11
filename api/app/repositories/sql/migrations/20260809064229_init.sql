@@ -17,6 +17,7 @@ CREATE INDEX users__email_ix ON users (email);
 CREATE TABLE groups (
   id TEXT NOT NULL PRIMARY KEY DEFAULT idkit_ulid_generate(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by_id TEXT REFERENCES users (id) ON DELETE SET NULL,
   name TEXT NOT NULL
 );
 

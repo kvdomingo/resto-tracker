@@ -1,7 +1,7 @@
 \restrict dbmate
 
 -- Dumped from database version 18.6 (Debian 18.6-1.pgdg12+2)
--- Dumped by pg_dump version 18.6
+-- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -87,8 +87,8 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.group_memberships (
-  user_id text NOT NULL,
-  group_id text NOT NULL
+    user_id text NOT NULL,
+    group_id text NOT NULL
 );
 
 
@@ -97,9 +97,10 @@ CREATE TABLE public.group_memberships (
 --
 
 CREATE TABLE public.groups (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  name text NOT NULL
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by_id text,
+    name text NOT NULL
 );
 
 
@@ -108,10 +109,10 @@ CREATE TABLE public.groups (
 --
 
 CREATE TABLE public.restaurant_branches (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  restaurant_id text NOT NULL,
-  geography public.GEOGRAPHY (POINT, 4326) NOT NULL,
-  label text NOT NULL
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    restaurant_id text NOT NULL,
+    geography public.geography(Point,4326) NOT NULL,
+    label text NOT NULL
 );
 
 
@@ -120,8 +121,8 @@ CREATE TABLE public.restaurant_branches (
 --
 
 CREATE TABLE public.restaurant_tags (
-  restaurant_id text NOT NULL,
-  tag_id text NOT NULL
+    restaurant_id text NOT NULL,
+    tag_id text NOT NULL
 );
 
 
@@ -130,9 +131,9 @@ CREATE TABLE public.restaurant_tags (
 --
 
 CREATE TABLE public.restaurant_visits (
-  user_id text NOT NULL,
-  restaurant_id text NOT NULL,
-  has_visited boolean DEFAULT false NOT NULL
+    user_id text NOT NULL,
+    restaurant_id text NOT NULL,
+    has_visited boolean DEFAULT false NOT NULL
 );
 
 
@@ -141,18 +142,16 @@ CREATE TABLE public.restaurant_visits (
 --
 
 CREATE TABLE public.restaurants (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  created_by_id text,
-  name text NOT NULL,
-  price_tier smallint NOT NULL,
-  instagram_handle text,
-  website text,
-  menu_url text,
-  is_reservation_required boolean DEFAULT false,
-  CONSTRAINT restaurants_price_tier_check CHECK (
-    ((price_tier >= 1) AND (price_tier <= 5))
-  )
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by_id text,
+    name text NOT NULL,
+    price_tier smallint NOT NULL,
+    instagram_handle text,
+    website text,
+    menu_url text,
+    is_reservation_required boolean DEFAULT false,
+    CONSTRAINT restaurants_price_tier_check CHECK (((price_tier >= 1) AND (price_tier <= 5)))
 );
 
 
@@ -161,14 +160,14 @@ CREATE TABLE public.restaurants (
 --
 
 CREATE TABLE public.reviews (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  author_id text,
-  restaurant_id text NOT NULL,
-  is_anonymous boolean DEFAULT false NOT NULL,
-  content text NOT NULL,
-  rating smallint NOT NULL,
-  CONSTRAINT reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    author_id text,
+    restaurant_id text NOT NULL,
+    is_anonymous boolean DEFAULT false NOT NULL,
+    content text NOT NULL,
+    rating smallint NOT NULL,
+    CONSTRAINT reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
 );
 
 
@@ -177,7 +176,7 @@ CREATE TABLE public.reviews (
 --
 
 CREATE TABLE public.schema_migrations (
-  version character varying NOT NULL
+    version character varying NOT NULL
 );
 
 
@@ -186,10 +185,10 @@ CREATE TABLE public.schema_migrations (
 --
 
 CREATE TABLE public.tags (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  created_by_id text,
-  name public.citext NOT NULL
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by_id text,
+    name public.citext NOT NULL
 );
 
 
@@ -198,11 +197,11 @@ CREATE TABLE public.tags (
 --
 
 CREATE TABLE public.users (
-  id text DEFAULT public.idkit_ulid_generate() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL,
-  idp_user_id text NOT NULL,
-  email public.citext NOT NULL,
-  name text
+    id text DEFAULT public.idkit_ulid_generate() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    idp_user_id text NOT NULL,
+    email public.citext NOT NULL,
+    name text
 );
 
 
@@ -211,7 +210,7 @@ CREATE TABLE public.users (
 --
 
 ALTER TABLE ONLY public.group_memberships
-ADD CONSTRAINT group_memberships_pk PRIMARY KEY (user_id, group_id);
+    ADD CONSTRAINT group_memberships_pk PRIMARY KEY (user_id, group_id);
 
 
 --
@@ -219,7 +218,7 @@ ADD CONSTRAINT group_memberships_pk PRIMARY KEY (user_id, group_id);
 --
 
 ALTER TABLE ONLY public.groups
-ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
 
 
 --
@@ -227,7 +226,7 @@ ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
 --
 
 ALTER TABLE ONLY public.restaurant_branches
-ADD CONSTRAINT restaurant_branches_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT restaurant_branches_pkey PRIMARY KEY (id);
 
 
 --
@@ -235,7 +234,7 @@ ADD CONSTRAINT restaurant_branches_pkey PRIMARY KEY (id);
 --
 
 ALTER TABLE ONLY public.restaurant_tags
-ADD CONSTRAINT restaurant_tags_pkey PRIMARY KEY (restaurant_id, tag_id);
+    ADD CONSTRAINT restaurant_tags_pkey PRIMARY KEY (restaurant_id, tag_id);
 
 
 --
@@ -243,7 +242,7 @@ ADD CONSTRAINT restaurant_tags_pkey PRIMARY KEY (restaurant_id, tag_id);
 --
 
 ALTER TABLE ONLY public.restaurants
-ADD CONSTRAINT restaurants_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT restaurants_pkey PRIMARY KEY (id);
 
 
 --
@@ -251,7 +250,7 @@ ADD CONSTRAINT restaurants_pkey PRIMARY KEY (id);
 --
 
 ALTER TABLE ONLY public.reviews
-ADD CONSTRAINT reviews_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT reviews_pkey PRIMARY KEY (id);
 
 
 --
@@ -259,7 +258,7 @@ ADD CONSTRAINT reviews_pkey PRIMARY KEY (id);
 --
 
 ALTER TABLE ONLY public.schema_migrations
-ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
 
 
 --
@@ -267,7 +266,7 @@ ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
 --
 
 ALTER TABLE ONLY public.tags
-ADD CONSTRAINT tags_name_key UNIQUE (name);
+    ADD CONSTRAINT tags_name_key UNIQUE (name);
 
 
 --
@@ -275,7 +274,7 @@ ADD CONSTRAINT tags_name_key UNIQUE (name);
 --
 
 ALTER TABLE ONLY public.tags
-ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -283,7 +282,7 @@ ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
 --
 
 ALTER TABLE ONLY public.users
-ADD CONSTRAINT users_email_key UNIQUE (email);
+    ADD CONSTRAINT users_email_key UNIQUE (email);
 
 
 --
@@ -291,7 +290,7 @@ ADD CONSTRAINT users_email_key UNIQUE (email);
 --
 
 ALTER TABLE ONLY public.users
-ADD CONSTRAINT users_idp_user_id_key UNIQUE (idp_user_id);
+    ADD CONSTRAINT users_idp_user_id_key UNIQUE (idp_user_id);
 
 
 --
@@ -299,34 +298,28 @@ ADD CONSTRAINT users_idp_user_id_key UNIQUE (idp_user_id);
 --
 
 ALTER TABLE ONLY public.users
-ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: group_memberships__group_id_ix; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX group_memberships__group_id_ix ON public.group_memberships USING btree (
-  group_id
-);
+CREATE INDEX group_memberships__group_id_ix ON public.group_memberships USING btree (group_id);
 
 
 --
 -- Name: restaurant_branches__geography_ix; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX restaurant_branches__geography_ix ON public.restaurant_branches USING gist (
-  geography
-);
+CREATE INDEX restaurant_branches__geography_ix ON public.restaurant_branches USING gist (geography);
 
 
 --
 -- Name: restaurant_branches__restaurant_id_ix; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX restaurant_branches__restaurant_id_ix ON public.restaurant_branches USING btree (
-  restaurant_id
-);
+CREATE INDEX restaurant_branches__restaurant_id_ix ON public.restaurant_branches USING btree (restaurant_id);
 
 
 --
@@ -340,9 +333,7 @@ CREATE INDEX restaurant_tags__tag_id_ix ON public.restaurant_tags USING btree (t
 -- Name: restaurant_visits__restaurant_id_ix; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX restaurant_visits__restaurant_id_ix ON public.restaurant_visits USING btree (
-  restaurant_id
-);
+CREATE INDEX restaurant_visits__restaurant_id_ix ON public.restaurant_visits USING btree (restaurant_id);
 
 
 --
@@ -371,9 +362,7 @@ CREATE INDEX users__idp_user_id_ix ON public.users USING btree (idp_user_id);
 --
 
 ALTER TABLE ONLY public.group_memberships
-ADD CONSTRAINT group_memberships_group_id_fkey FOREIGN KEY (
-  group_id
-) REFERENCES public.groups (id) ON DELETE CASCADE;
+    ADD CONSTRAINT group_memberships_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE CASCADE;
 
 
 --
@@ -381,9 +370,15 @@ ADD CONSTRAINT group_memberships_group_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.group_memberships
-ADD CONSTRAINT group_memberships_user_id_fkey FOREIGN KEY (
-  user_id
-) REFERENCES public.users (id) ON DELETE CASCADE;
+    ADD CONSTRAINT group_memberships_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: groups groups_created_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.groups
+    ADD CONSTRAINT groups_created_by_id_fkey FOREIGN KEY (created_by_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -391,9 +386,7 @@ ADD CONSTRAINT group_memberships_user_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurant_branches
-ADD CONSTRAINT restaurant_branches_restaurant_id_fkey FOREIGN KEY (
-  restaurant_id
-) REFERENCES public.restaurants (id) ON DELETE CASCADE;
+    ADD CONSTRAINT restaurant_branches_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id) ON DELETE CASCADE;
 
 
 --
@@ -401,9 +394,7 @@ ADD CONSTRAINT restaurant_branches_restaurant_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurant_tags
-ADD CONSTRAINT restaurant_tags_restaurant_id_fkey FOREIGN KEY (
-  restaurant_id
-) REFERENCES public.restaurants (id) ON DELETE CASCADE;
+    ADD CONSTRAINT restaurant_tags_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id) ON DELETE CASCADE;
 
 
 --
@@ -411,9 +402,7 @@ ADD CONSTRAINT restaurant_tags_restaurant_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurant_tags
-ADD CONSTRAINT restaurant_tags_tag_id_fkey FOREIGN KEY (
-  tag_id
-) REFERENCES public.tags (id) ON DELETE CASCADE;
+    ADD CONSTRAINT restaurant_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
 
 
 --
@@ -421,9 +410,7 @@ ADD CONSTRAINT restaurant_tags_tag_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurant_visits
-ADD CONSTRAINT restaurant_visits_restaurant_id_fkey FOREIGN KEY (
-  restaurant_id
-) REFERENCES public.restaurants (id);
+    ADD CONSTRAINT restaurant_visits_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id);
 
 
 --
@@ -431,9 +418,7 @@ ADD CONSTRAINT restaurant_visits_restaurant_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurant_visits
-ADD CONSTRAINT restaurant_visits_user_id_fkey FOREIGN KEY (
-  user_id
-) REFERENCES public.users (id);
+    ADD CONSTRAINT restaurant_visits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -441,9 +426,7 @@ ADD CONSTRAINT restaurant_visits_user_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.restaurants
-ADD CONSTRAINT restaurants_created_by_id_fkey FOREIGN KEY (
-  created_by_id
-) REFERENCES public.users (id) ON DELETE SET NULL;
+    ADD CONSTRAINT restaurants_created_by_id_fkey FOREIGN KEY (created_by_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -451,9 +434,7 @@ ADD CONSTRAINT restaurants_created_by_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.reviews
-ADD CONSTRAINT reviews_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users (
-  id
-) ON DELETE SET NULL;
+    ADD CONSTRAINT reviews_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -461,9 +442,7 @@ ADD CONSTRAINT reviews_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.
 --
 
 ALTER TABLE ONLY public.reviews
-ADD CONSTRAINT reviews_restaurant_id_fkey FOREIGN KEY (
-  restaurant_id
-) REFERENCES public.restaurants (id) ON DELETE CASCADE;
+    ADD CONSTRAINT reviews_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id) ON DELETE CASCADE;
 
 
 --
@@ -471,9 +450,7 @@ ADD CONSTRAINT reviews_restaurant_id_fkey FOREIGN KEY (
 --
 
 ALTER TABLE ONLY public.tags
-ADD CONSTRAINT tags_created_by_id_fkey FOREIGN KEY (
-  created_by_id
-) REFERENCES public.users (id) ON DELETE SET NULL;
+    ADD CONSTRAINT tags_created_by_id_fkey FOREIGN KEY (created_by_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -488,5 +465,5 @@ ADD CONSTRAINT tags_created_by_id_fkey FOREIGN KEY (
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-('20260809064229'),
-('20261011000000');
+    ('20260809064229'),
+    ('20261011000000');

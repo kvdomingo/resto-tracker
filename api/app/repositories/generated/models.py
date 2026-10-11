@@ -8,6 +8,7 @@ from typing import Any
 class Group(pydantic.BaseModel):
     id: str
     created_at: pydantic.AwareDatetime
+    created_by_id: str | None
     name: str
 
 
