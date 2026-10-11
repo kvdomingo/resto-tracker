@@ -1,3 +1,4 @@
+import { keepPreviousData } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { UtensilsIcon } from "lucide-react";
 import { useState } from "react";
@@ -7,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Map as MapComponent, MapMarker, MarkerContent } from "@/components/ui/map.tsx";
 import { Rating } from "@/components/ui/rating";
 import { Skeleton } from "@/components/ui/skeleton";
-import { env } from "@/env";
 import { useRootQueryStates } from "@/hooks/use-root-query-states.ts";
 import { $api, PAGINATED_SENTINEL } from "@/lib/api.ts";
 import { INITIAL_BBOX } from "@/lib/constants.ts";
@@ -42,8 +42,11 @@ function Page() {
     "/api/restaurants",
     {
       params: {
-        query: { page, page_size },
+        query: { page, page_size, ...bbox },
       },
+    },
+    {
+      placeholderData: keepPreviousData,
     },
   );
 
@@ -52,16 +55,8 @@ function Page() {
       <h1 className="text-4xl font-bold">
         {isLoading ? "Loading..." : `Found ${data.meta.page_count} restaurants`}
       </h1>
-      {env.DEV && (
-        <div className="flex flex-col">
-          <span>
-            bounds:{" "}
-            {`${bbox.n.toFixed(5)}, ${bbox.e.toFixed(5)}, ${bbox.w.toFixed(5)}, ${bbox.s.toFixed(5)}`}
-          </span>
-        </div>
-      )}
       <div className="grid grid-cols-2 gap-8">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
           {isLoading
             ? Array.from({ length: 6 })
                 .fill(0)
@@ -91,7 +86,7 @@ function Page() {
                         <b>Branches</b>
                         <ul>
                           {item.branches.map((branch) => (
-                            <li key={branch.location}>{branch.location}</li>
+                            <li key={branch.id}>{branch.label}</li>
                           ))}
                         </ul>
                       </div>
@@ -101,33 +96,40 @@ function Page() {
                 </Link>
               ))}
         </div>
+
         <Card className="aspect-square p-0">
           <CardContent className="size-full p-0">
             <MapComponent
               bounds={[bbox.w, bbox.s, bbox.e, bbox.n]}
               className="size-full overflow-hidden rounded-lg"
+              theme="light"
             >
               <MapInit />
 
-              {data.data.map((resto) => (
-                <MapMarker
-                  key={resto.id}
-                  longitude={resto.branches.at(0)!.geography!.longitude}
-                  latitude={resto.branches.at(0)!.geography!.latitude}
-                >
-                  <MarkerContent>
-                    <UtensilsIcon
-                      size={36}
-                      className={cn("fill-primary transition-transform duration-150", {
-                        "scale-110": hoveredResto === resto.id,
-                      })}
-                      fillOpacity={100}
-                      onMouseEnter={() => setHoveredResto(resto.id)}
-                      onMouseLeave={() => setHoveredResto(null)}
-                    />
-                  </MarkerContent>
-                </MapMarker>
-              ))}
+              {data.data
+                .flatMap((d) => d.branches)
+                .map((branch) => (
+                  <MapMarker
+                    key={branch.id}
+                    longitude={branch.geography.longitude}
+                    latitude={branch.geography.latitude}
+                  >
+                    <MarkerContent>
+                      <UtensilsIcon
+                        size={36}
+                        className={cn(
+                          "fill-primary transition-transform duration-150",
+                          {
+                            "scale-110": hoveredResto === branch.restaurant_id,
+                          },
+                        )}
+                        fillOpacity={100}
+                        onMouseEnter={() => setHoveredResto(branch.restaurant_id)}
+                        onMouseLeave={() => setHoveredResto(null)}
+                      />
+                    </MarkerContent>
+                  </MapMarker>
+                ))}
             </MapComponent>
           </CardContent>
         </Card>

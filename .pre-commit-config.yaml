@@ -26,10 +26,10 @@ repos:
       # schema.sql is pg_dump output, not hand-written
       - id: sqlfluff-lint
         args: [ --config, api/pyproject.toml ]
-        exclude: ^api/repositories/sql/schema\.sql$
+        exclude: ^api/app/repositories/sql/schema\.sql$
       - id: sqlfluff-fix
         args: [ --config, api/pyproject.toml ]
-        exclude: ^api/repositories/sql/schema\.sql$
+        exclude: ^api/app/repositories/sql/schema\.sql$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

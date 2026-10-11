@@ -36,8 +36,8 @@ services:
     user: 1000:1000
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      DBMATE_MIGRATIONS_DIR: /app/repositories/sql/migrations
-      DBMATE_SCHEMA_FILE: /app/repositories/sql/schema.sql
+      DBMATE_MIGRATIONS_DIR: /app/app/repositories/sql/migrations
+      DBMATE_SCHEMA_FILE: /app/app/repositories/sql/schema.sql
     working_dir: /app
     volumes:
       - ./api:/app

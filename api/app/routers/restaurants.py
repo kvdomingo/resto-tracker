@@ -3,13 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.internals.auth import AppUser, get_user
+from app.models.geometry import Bbox
 from app.models.pagination import Paginated, PaginatedMeta
 from app.repositories.generated.models import Restaurant
 from app.repositories.generated.restaurants import (
     CreateRestaurantParams,
     DeleteRestaurantParams,
     GetRestaurantParams,
-    ListRestaurantsParams,
+    ListRestaurantsInAreaParams,
+    ListRestaurantsInAreaRow,
     UpdateRestaurantParams,
 )
 from app.repositories.queriers import Queriers, get_queriers
@@ -20,16 +22,24 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=Paginated[Restaurant])
+@router.get("", response_model=Paginated[ListRestaurantsInAreaRow])
 async def list_restaurants(
+    bbox: Annotated[Bbox, Depends()],
     q: Queriers = Depends(get_queriers),
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 10,
 ):
     data = [
         row
-        async for row in q.restaurants.list_restaurants(
-            arg=ListRestaurantsParams(limit=page_size, offset=(page - 1) * page_size)
+        async for row in q.restaurants.list_restaurants_in_area(
+            arg=ListRestaurantsInAreaParams(
+                limit=page_size,
+                offset=(page - 1) * page_size,
+                n=bbox.n,
+                e=bbox.e,
+                w=bbox.w,
+                s=bbox.s,
+            )
         )
     ]
     return Paginated(

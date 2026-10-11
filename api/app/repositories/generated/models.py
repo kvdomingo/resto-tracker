@@ -2,8 +2,7 @@
 # versions:
 #   sqlc v1.31.1
 import pydantic
-
-from app.models.adapters.restaurants import RestaurantBranches
+from typing import Any
 
 
 class Group(pydantic.BaseModel):
@@ -23,12 +22,22 @@ class Restaurant(pydantic.BaseModel):
     created_by_id: str | None
     name: str
     price_tier: int
-    tags: list[str]
-    branches: list[RestaurantBranches]
     instagram_handle: str | None
     website: str | None
     menu_url: str | None
     is_reservation_required: bool | None
+
+
+class RestaurantBranch(pydantic.BaseModel):
+    id: str
+    restaurant_id: str
+    geography: Any
+    label: str
+
+
+class RestaurantTag(pydantic.BaseModel):
+    restaurant_id: str
+    tag_id: str
 
 
 class RestaurantVisit(pydantic.BaseModel):
@@ -49,6 +58,13 @@ class Review(pydantic.BaseModel):
 
 class SchemaMigration(pydantic.BaseModel):
     version: str
+
+
+class Tag(pydantic.BaseModel):
+    id: str
+    created_at: pydantic.AwareDatetime
+    created_by_id: str | None
+    name: str
 
 
 class User(pydantic.BaseModel):

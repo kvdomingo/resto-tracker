@@ -48,7 +48,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="dark">
+      <body>
         <NuqsAdapter>
           <QueryClientProvider client={queryClient}>
             <Navbar />

@@ -3,7 +3,7 @@
 #   sqlc v1.31.1
 # source: users.sql
 import pydantic
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
@@ -73,7 +73,7 @@ RETURNING id, created_at, idp_user_id, email, name
 class UpdateUserParams(pydantic.BaseModel):
     id: str
     idp_user_id: str | None
-    email: str | None
+    email: Any | None
     name: str | None
 
 

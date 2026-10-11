@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/navigation-menu.tsx";
 import { useRootQueryStates } from "@/hooks/use-root-query-states";
 import { $api } from "@/lib/api";
+import { INITIAL_BBOX } from "@/lib/constants";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
@@ -58,7 +59,11 @@ export function Navbar() {
     <NavigationMenu className="p-4 bg-secondary w-full max-w-full [&>div:has(>ul)]:w-full">
       <NavigationMenuList className="flex justify-between w-full">
         <NavigationMenuItem className="basis-1/3 small-caps tracking-widest">
-          RestoTracker
+          <Button variant="ghost" asChild>
+            <Link to="/" search={{ bbox: INITIAL_BBOX }} className="w-auto">
+              RestoTracker
+            </Link>
+          </Button>
         </NavigationMenuItem>
         <NavigationMenuItem className="basis-1/3 flex justify-center">
           <InputGroup className="w-64 focus-within:w-100 transition-[width] duration-300">
@@ -92,9 +97,19 @@ export function Navbar() {
         <div className="basis-1/3 flex justify-end items-center gap-2">
           {isLoggedIn && (
             <NavigationMenuItem>
-              <Button variant="ghost" size="icon-sm">
-                <PlusIcon />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm">
+                    <PlusIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>Add restaurant</DropdownMenuItem>
+                    <DropdownMenuItem>Add review</DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </NavigationMenuItem>
           )}
           <NavigationMenuItem>

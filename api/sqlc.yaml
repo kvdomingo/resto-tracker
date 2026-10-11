@@ -2,8 +2,8 @@ version: "2"
 plugins:
   - name: py
     wasm:
-      url: https://github.com/kvdomingo/sqlc-gen-python/releases/download/v1.0.1/sqlc-gen-python.wasm
-      sha256: 3e9767af784b728ec9bd4499619721e5dabdebeb21cf3c7fe86a045d865584d1
+      url: https://github.com/kvdomingo/sqlc-gen-python/releases/download/v1.1.0/sqlc-gen-python.wasm
+      sha256: b89880f4ed5b53c12527562015fd505e5f2af035e1d02460e45ea3fda31afd13
 sql:
   - schema: app/repositories/sql/schema.sql
     queries: app/repositories/sql/queries
@@ -24,6 +24,12 @@ sql:
           emit_querier_protocol: true
           emit_query_errors: true
           overrides:
-            - column: restaurants.branches
-              py_type: RestaurantBranches
+            - db_type: restaurant_branch_list
               py_import: app.models.adapters.restaurants
+              py_type: RestaurantBranch
+              many: true
+options:
+  py:
+    overrides:
+      - db_type: public.citext
+        py_type: str

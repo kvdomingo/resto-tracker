@@ -1,7 +1,9 @@
 from fastapi import HTTPException, Request, status
 from fastapi.security import SecurityScopes
+from loguru import logger
 from starlette.authentication import AuthCredentials, AuthenticationBackend, BaseUser
 from starlette.requests import HTTPConnection
+from stytch.core.response_base import StytchError
 
 from app.interfaces.postgres import get_db_ctx
 from app.interfaces.stytch import get_stytch_client
@@ -33,8 +35,11 @@ class StytchAuthBackend(AuthenticationBackend):
             return None
 
         stytch = get_stytch_client()
-        res = await stytch.sessions.authenticate_async(session_jwt=jwt)
-        if not res.is_success:
+        try:
+            res = await stytch.sessions.authenticate_async(session_jwt=jwt)
+        except StytchError as e:
+            logger.error(e)
+            conn.session.clear()
             return None
 
         async with get_db_ctx() as db:

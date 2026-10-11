@@ -14,7 +14,7 @@ export const PAGINATED_SENTINEL: {
   data: [],
   meta: {
     page: 1,
-    page_count: 10,
+    page_count: 0,
     page_size: 0,
     total_count: null,
   },

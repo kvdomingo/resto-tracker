@@ -9,18 +9,18 @@ from typing import Protocol, cast
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 import sqlalchemy.orm
-from app.models.adapters.restaurants import RestaurantBranches
+from app.models.adapters.restaurants import RestaurantBranch
 
 from app.repositories.generated import errors, models
 
 
 CREATE_RESTAURANT = """-- name: create_restaurant \\:one
 INSERT INTO restaurants (
-    created_by_id, name, price_tier, tags, branches,
-    instagram_handle, website, menu_url, is_reservation_required
+  created_by_id, name, price_tier, instagram_handle,
+  website, menu_url, is_reservation_required
 )
-VALUES (:p1, :p2, :p3, :p4, :p5, :p6, :p7, :p8, :p9)
-RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+VALUES (:p1, :p2, :p3, :p4, :p5, :p6, :p7)
+RETURNING id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
 """
 
 
@@ -28,8 +28,6 @@ class CreateRestaurantParams(pydantic.BaseModel):
     created_by_id: str | None
     name: str
     price_tier: int
-    tags: list[str]
-    branches: list[RestaurantBranches]
     instagram_handle: str | None
     website: str | None
     menu_url: str | None
@@ -39,7 +37,7 @@ class CreateRestaurantParams(pydantic.BaseModel):
 DELETE_RESTAURANT = """-- name: delete_restaurant \\:one
 DELETE FROM restaurants
 WHERE id = :p1
-RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+RETURNING id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
 """
 
 
@@ -48,7 +46,7 @@ class DeleteRestaurantParams(pydantic.BaseModel):
 
 
 GET_RESTAURANT = """-- name: get_restaurant \\:one
-SELECT id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+SELECT id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
 FROM restaurants
 WHERE id = :p1
 """
@@ -59,7 +57,7 @@ class GetRestaurantParams(pydantic.BaseModel):
 
 
 LIST_RESTAURANTS = """-- name: list_restaurants \\:many
-SELECT id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+SELECT id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
 FROM restaurants
 LIMIT :p1 OFFSET :p2
 """
@@ -70,19 +68,67 @@ class ListRestaurantsParams(pydantic.BaseModel):
     offset: int
 
 
+LIST_RESTAURANTS_IN_AREA = """-- name: list_restaurants_in_area \\:many
+SELECT
+  r.id, r.created_at, r.created_by_id, r.name, r.price_tier, r.instagram_handle, r.website, r.menu_url, r.is_reservation_required,
+  JSONB_AGG(
+    JSON_BUILD_OBJECT(
+      'id', b.id,
+      'restaurant_id', b.restaurant_id,
+      'label', b.label,
+      'geography', JSONB_BUILD_OBJECT(
+        'latitude', ST_Y(b.geography\\:\\:geometry),
+        'longitude', ST_X(b.geography\\:\\:geometry)
+      )
+    )
+    ORDER BY b.id
+  )\\:\\:restaurant_branch_list AS branches
+FROM restaurants r
+JOIN restaurant_branches b ON r.id = b.restaurant_id
+WHERE
+  b.geography && ST_MakeEnvelope(:p1\\:\\:FLOAT, :p2\\:\\:FLOAT, :p3\\:\\:FLOAT, :p4\\:\\:FLOAT, 4326)
+GROUP BY r.id
+ORDER BY r.id
+LIMIT :p6 OFFSET :p5
+"""
+
+
+class ListRestaurantsInAreaParams(pydantic.BaseModel):
+    w: float
+    s: float
+    e: float
+    n: float
+    offset: int
+    limit: int
+
+
+class ListRestaurantsInAreaRow(pydantic.BaseModel):
+    id: str
+    created_at: pydantic.AwareDatetime
+    created_by_id: str | None
+    name: str
+    price_tier: int
+    instagram_handle: str | None
+    website: str | None
+    menu_url: str | None
+    is_reservation_required: bool | None
+    branches: list[RestaurantBranch]
+
+
 UPDATE_RESTAURANT = """-- name: update_restaurant \\:one
 UPDATE restaurants
 SET
-    name = COALESCE(:p2, name),
-    price_tier = COALESCE(:p3, price_tier),
-    tags = COALESCE(:p4, tags),
-    branches = COALESCE(:p5, branches),
-    instagram_handle = COALESCE(:p6, instagram_handle),
-    website = COALESCE(:p7, website),
-    menu_url = COALESCE(:p8, menu_url),
-    is_reservation_required = COALESCE(:p9, is_reservation_required)
+  name = COALESCE(:p2, name),
+  price_tier = COALESCE(:p3, price_tier),
+  instagram_handle = COALESCE(:p4, instagram_handle),
+  website = COALESCE(:p5, website),
+  menu_url = COALESCE(:p6, menu_url),
+  is_reservation_required = COALESCE(
+    :p7,
+    is_reservation_required
+  )
 WHERE id = :p1
-RETURNING id, created_at, created_by_id, name, price_tier, tags, branches, instagram_handle, website, menu_url, is_reservation_required
+RETURNING id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
 """
 
 
@@ -90,8 +136,6 @@ class UpdateRestaurantParams(pydantic.BaseModel):
     id: str
     name: str | None
     price_tier: int | None
-    tags: list[str] | None
-    branches: list[RestaurantBranches] | None
     instagram_handle: str | None
     website: str | None
     menu_url: str | None
@@ -107,6 +151,8 @@ class QuerierProtocol(Protocol):
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> Iterator[models.Restaurant]: ...
 
+    def list_restaurants_in_area(self, arg: ListRestaurantsInAreaParams) -> Iterator[ListRestaurantsInAreaRow]: ...
+
     def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None: ...
 
 
@@ -118,6 +164,8 @@ class AsyncQuerierProtocol(Protocol):
     async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None: ...
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> AsyncIterator[models.Restaurant]: ...
+
+    def list_restaurants_in_area(self, arg: ListRestaurantsInAreaParams) -> AsyncIterator[ListRestaurantsInAreaRow]: ...
 
     async def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None: ...
 
@@ -134,12 +182,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 "p1": arg.created_by_id,
                 "p2": arg.name,
                 "p3": arg.price_tier,
-                "p4": arg.tags,
-                "p5": arg.branches,
-                "p6": arg.instagram_handle,
-                "p7": arg.website,
-                "p8": arg.menu_url,
-                "p9": arg.is_reservation_required,
+                "p4": arg.instagram_handle,
+                "p5": arg.website,
+                "p6": arg.menu_url,
+                "p7": arg.is_reservation_required,
             }).first()
             if row is None:
                 return None
@@ -149,12 +195,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None:
@@ -168,12 +212,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
@@ -187,12 +229,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> Iterator[models.Restaurant]:
@@ -205,12 +245,34 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                     created_by_id=cast(str | None, row[2]),
                     name=cast(str, row[3]),
                     price_tier=cast(int, row[4]),
-                    tags=cast(list[str], row[5]),
-                    branches=cast(list[RestaurantBranches], row[6]),
-                    instagram_handle=cast(str | None, row[7]),
-                    website=cast(str | None, row[8]),
-                    menu_url=cast(str | None, row[9]),
-                    is_reservation_required=cast(bool | None, row[10]),
+                    instagram_handle=cast(str | None, row[5]),
+                    website=cast(str | None, row[6]),
+                    menu_url=cast(str | None, row[7]),
+                    is_reservation_required=cast(bool | None, row[8]),
+                )
+
+    def list_restaurants_in_area(self, arg: ListRestaurantsInAreaParams) -> Iterator[ListRestaurantsInAreaRow]:
+        with errors._wrap_errors("list_restaurants_in_area"):
+            result = self._conn.execute(sqlalchemy.text(LIST_RESTAURANTS_IN_AREA), {
+                "p1": arg.w,
+                "p2": arg.s,
+                "p3": arg.e,
+                "p4": arg.n,
+                "p5": arg.offset,
+                "p6": arg.limit,
+            })
+            for row in result:
+                yield ListRestaurantsInAreaRow(
+                    id=cast(str, row[0]),
+                    created_at=cast(pydantic.AwareDatetime, row[1]),
+                    created_by_id=cast(str | None, row[2]),
+                    name=cast(str, row[3]),
+                    price_tier=cast(int, row[4]),
+                    instagram_handle=cast(str | None, row[5]),
+                    website=cast(str | None, row[6]),
+                    menu_url=cast(str | None, row[7]),
+                    is_reservation_required=cast(bool | None, row[8]),
+                    branches=cast(list[RestaurantBranch], row[9]),
                 )
 
     def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None:
@@ -219,12 +281,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 "p1": arg.id,
                 "p2": arg.name,
                 "p3": arg.price_tier,
-                "p4": arg.tags,
-                "p5": arg.branches,
-                "p6": arg.instagram_handle,
-                "p7": arg.website,
-                "p8": arg.menu_url,
-                "p9": arg.is_reservation_required,
+                "p4": arg.instagram_handle,
+                "p5": arg.website,
+                "p6": arg.menu_url,
+                "p7": arg.is_reservation_required,
             }).first()
             if row is None:
                 return None
@@ -234,12 +294,10 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
 
@@ -255,12 +313,10 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 "p1": arg.created_by_id,
                 "p2": arg.name,
                 "p3": arg.price_tier,
-                "p4": arg.tags,
-                "p5": arg.branches,
-                "p6": arg.instagram_handle,
-                "p7": arg.website,
-                "p8": arg.menu_url,
-                "p9": arg.is_reservation_required,
+                "p4": arg.instagram_handle,
+                "p5": arg.website,
+                "p6": arg.menu_url,
+                "p7": arg.is_reservation_required,
             })).first()
             if row is None:
                 return None
@@ -270,12 +326,10 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     async def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None:
@@ -289,12 +343,10 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
@@ -308,12 +360,10 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )
 
     async def list_restaurants(self, arg: ListRestaurantsParams) -> AsyncIterator[models.Restaurant]:
@@ -326,12 +376,34 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                     created_by_id=cast(str | None, row[2]),
                     name=cast(str, row[3]),
                     price_tier=cast(int, row[4]),
-                    tags=cast(list[str], row[5]),
-                    branches=cast(list[RestaurantBranches], row[6]),
-                    instagram_handle=cast(str | None, row[7]),
-                    website=cast(str | None, row[8]),
-                    menu_url=cast(str | None, row[9]),
-                    is_reservation_required=cast(bool | None, row[10]),
+                    instagram_handle=cast(str | None, row[5]),
+                    website=cast(str | None, row[6]),
+                    menu_url=cast(str | None, row[7]),
+                    is_reservation_required=cast(bool | None, row[8]),
+                )
+
+    async def list_restaurants_in_area(self, arg: ListRestaurantsInAreaParams) -> AsyncIterator[ListRestaurantsInAreaRow]:
+        with errors._wrap_errors("list_restaurants_in_area"):
+            result = await self._conn.stream(sqlalchemy.text(LIST_RESTAURANTS_IN_AREA), {
+                "p1": arg.w,
+                "p2": arg.s,
+                "p3": arg.e,
+                "p4": arg.n,
+                "p5": arg.offset,
+                "p6": arg.limit,
+            })
+            async for row in result:
+                yield ListRestaurantsInAreaRow(
+                    id=cast(str, row[0]),
+                    created_at=cast(pydantic.AwareDatetime, row[1]),
+                    created_by_id=cast(str | None, row[2]),
+                    name=cast(str, row[3]),
+                    price_tier=cast(int, row[4]),
+                    instagram_handle=cast(str | None, row[5]),
+                    website=cast(str | None, row[6]),
+                    menu_url=cast(str | None, row[7]),
+                    is_reservation_required=cast(bool | None, row[8]),
+                    branches=cast(list[RestaurantBranch], row[9]),
                 )
 
     async def update_restaurant(self, arg: UpdateRestaurantParams) -> models.Restaurant | None:
@@ -340,12 +412,10 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 "p1": arg.id,
                 "p2": arg.name,
                 "p3": arg.price_tier,
-                "p4": arg.tags,
-                "p5": arg.branches,
-                "p6": arg.instagram_handle,
-                "p7": arg.website,
-                "p8": arg.menu_url,
-                "p9": arg.is_reservation_required,
+                "p4": arg.instagram_handle,
+                "p5": arg.website,
+                "p6": arg.menu_url,
+                "p7": arg.is_reservation_required,
             })).first()
             if row is None:
                 return None
@@ -355,10 +425,8 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
                 price_tier=cast(int, row[4]),
-                tags=cast(list[str], row[5]),
-                branches=cast(list[RestaurantBranches], row[6]),
-                instagram_handle=cast(str | None, row[7]),
-                website=cast(str | None, row[8]),
-                menu_url=cast(str | None, row[9]),
-                is_reservation_required=cast(bool | None, row[10]),
+                instagram_handle=cast(str | None, row[5]),
+                website=cast(str | None, row[6]),
+                menu_url=cast(str | None, row[7]),
+                is_reservation_required=cast(bool | None, row[8]),
             )

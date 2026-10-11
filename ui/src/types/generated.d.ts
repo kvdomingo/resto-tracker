@@ -99,7 +99,8 @@ export interface paths {
     /** List Restaurants */
     get: operations["list_restaurants_api_restaurants_get"];
     put?: never;
-    post?: never;
+    /** Create Restaurant */
+    post: operations["create_restaurant_api_restaurants_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -117,10 +118,12 @@ export interface paths {
     get: operations["get_restaurant_api_restaurants__id__get"];
     put?: never;
     post?: never;
-    delete?: never;
+    /** Delete Restaurant */
+    delete: operations["delete_restaurant_api_restaurants__id__delete"];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Update Restaurant */
+    patch: operations["update_restaurant_api_restaurants__id__patch"];
     trace?: never;
   };
 }
@@ -150,10 +153,53 @@ export interface components {
       /** Longitude */
       longitude: number;
     };
+    /** CreateRestaurantParams */
+    CreateRestaurantParams: {
+      /** Created By Id */
+      created_by_id: string | null;
+      /** Name */
+      name: string;
+      /** Price Tier */
+      price_tier: number;
+      /** Instagram Handle */
+      instagram_handle: string | null;
+      /** Website */
+      website: string | null;
+      /** Menu Url */
+      menu_url: string | null;
+      /** Is Reservation Required */
+      is_reservation_required: boolean | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
+    };
+    /** ListRestaurantsInAreaRow */
+    ListRestaurantsInAreaRow: {
+      /** Id */
+      id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Created By Id */
+      created_by_id: string | null;
+      /** Name */
+      name: string;
+      /** Price Tier */
+      price_tier: number;
+      /** Instagram Handle */
+      instagram_handle: string | null;
+      /** Website */
+      website: string | null;
+      /** Menu Url */
+      menu_url: string | null;
+      /** Is Reservation Required */
+      is_reservation_required: boolean | null;
+      /** Branches */
+      branches: components["schemas"]["RestaurantBranch"][];
     };
     /** PaginatedMeta */
     PaginatedMeta: {
@@ -166,10 +212,10 @@ export interface components {
       /** Total Count */
       total_count?: number | null;
     };
-    /** Paginated[Restaurant] */
-    Paginated_Restaurant_: {
+    /** Paginated[ListRestaurantsInAreaRow] */
+    Paginated_ListRestaurantsInAreaRow_: {
       /** Data */
-      data: components["schemas"]["Restaurant"][];
+      data: components["schemas"]["ListRestaurantsInAreaRow"][];
       meta: components["schemas"]["PaginatedMeta"];
     };
     /** Restaurant */
@@ -187,10 +233,6 @@ export interface components {
       name: string;
       /** Price Tier */
       price_tier: number;
-      /** Tags */
-      tags: string[];
-      /** Branches */
-      branches: components["schemas"]["RestaurantBranches"][];
       /** Instagram Handle */
       instagram_handle: string | null;
       /** Website */
@@ -200,11 +242,32 @@ export interface components {
       /** Is Reservation Required */
       is_reservation_required: boolean | null;
     };
-    /** RestaurantBranches */
-    RestaurantBranches: {
-      /** Location */
-      location: string;
-      geography?: components["schemas"]["Coordinates"] | null;
+    /** RestaurantBranch */
+    RestaurantBranch: {
+      /** Id */
+      id: string;
+      /** Restaurant Id */
+      restaurant_id: string;
+      /** Label */
+      label: string;
+      geography: components["schemas"]["Coordinates"];
+    };
+    /** UpdateRestaurantParams */
+    UpdateRestaurantParams: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string | null;
+      /** Price Tier */
+      price_tier: number | null;
+      /** Instagram Handle */
+      instagram_handle: string | null;
+      /** Website */
+      website: string | null;
+      /** Menu Url */
+      menu_url: string | null;
+      /** Is Reservation Required */
+      is_reservation_required: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -341,9 +404,13 @@ export interface operations {
   };
   list_restaurants_api_restaurants_get: {
     parameters: {
-      query?: {
+      query: {
         page?: number;
         page_size?: number;
+        n: number;
+        e: number;
+        w: number;
+        s: number;
       };
       header?: never;
       path?: never;
@@ -357,7 +424,40 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Paginated_Restaurant_"];
+          "application/json": components["schemas"]["Paginated_ListRestaurantsInAreaRow_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_restaurant_api_restaurants_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateRestaurantParams"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Restaurant"];
         };
       };
       /** @description Validation Error */
@@ -389,6 +489,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Restaurant"] | null;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_restaurant_api_restaurants__id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Restaurant"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_restaurant_api_restaurants__id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateRestaurantParams"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Restaurant"];
         };
       };
       /** @description Validation Error */
