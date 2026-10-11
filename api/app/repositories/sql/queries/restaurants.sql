@@ -1,7 +1,28 @@
 -- name: GetRestaurant :one
-SELECT *
-FROM restaurants
-WHERE id = $1;
+SELECT
+  r.*,
+  JSONB_AGG(
+    JSON_BUILD_OBJECT(
+      'id', b.id,
+      'restaurant_id', b.restaurant_id,
+      'label', b.label,
+      'geography', JSONB_BUILD_OBJECT(
+        'latitude', ST_Y(b.geography::geometry),
+        'longitude', ST_X(b.geography::geometry)
+      )
+    )
+    ORDER BY b.id
+  )::restaurant_branch_list AS branches,
+  JSONB_AGG(t.name) AS tags
+FROM restaurants r
+  LEFT JOIN restaurant_branches b
+    ON b.restaurant_id = r.id
+  LEFT JOIN restaurant_tags rt
+    ON rt.restaurant_id = r.id
+  LEFT JOIN tags t
+    ON t.id = rt.tag_id
+WHERE r.id = $1
+GROUP BY r.id;
 
 -- name: ListRestaurants :many
 SELECT *

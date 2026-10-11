@@ -16,6 +16,18 @@ LIMIT
   $2
   OFFSET $3;
 
+-- name: GetGroup :one
+SELECT
+  g.*,
+  JSONB_AGG(m.*) AS members
+FROM groups g
+  JOIN group_memberships m
+    ON m.group_id = g.id
+WHERE
+  g.id = $1
+  AND g.created_by_id = $2
+GROUP BY g.id;
+
 -- name: CreateGroup :one
 WITH
   new_group AS (
@@ -37,11 +49,15 @@ FROM new_group;
 
 -- name: UpdateGroup :one
 UPDATE groups
-SET name = $2
-WHERE id = $1
+SET name = $3
+WHERE
+  id = $1
+  AND created_by_id = $2
 RETURNING *;
 
 -- name: DeleteGroup :one
 DELETE FROM groups
-WHERE id = $1
+WHERE
+  id = $1
+  AND created_by_id = $2
 RETURNING *;

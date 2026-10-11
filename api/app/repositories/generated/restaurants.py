@@ -4,7 +4,7 @@
 # source: restaurants.sql
 import pydantic
 from collections.abc import AsyncIterator, Iterator
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
@@ -46,14 +46,49 @@ class DeleteRestaurantParams(pydantic.BaseModel):
 
 
 GET_RESTAURANT = """-- name: get_restaurant \\:one
-SELECT id, created_at, created_by_id, name, price_tier, instagram_handle, website, menu_url, is_reservation_required
-FROM restaurants
-WHERE id = :p1
+SELECT
+  r.id, r.created_at, r.created_by_id, r.name, r.price_tier, r.instagram_handle, r.website, r.menu_url, r.is_reservation_required,
+  JSONB_AGG(
+    JSON_BUILD_OBJECT(
+      'id', b.id,
+      'restaurant_id', b.restaurant_id,
+      'label', b.label,
+      'geography', JSONB_BUILD_OBJECT(
+        'latitude', ST_Y(b.geography\\:\\:geometry),
+        'longitude', ST_X(b.geography\\:\\:geometry)
+      )
+    )
+    ORDER BY b.id
+  )\\:\\:restaurant_branch_list AS branches,
+  JSONB_AGG(t.name) AS tags
+FROM restaurants r
+LEFT JOIN restaurant_branches b
+  ON b.restaurant_id = r.id
+LEFT JOIN restaurant_tags rt
+  ON rt.restaurant_id = r.id
+LEFT JOIN tags t
+  ON t.id = rt.tag_id
+WHERE r.id = :p1
+GROUP BY r.id
 """
 
 
 class GetRestaurantParams(pydantic.BaseModel):
     id: str
+
+
+class GetRestaurantRow(pydantic.BaseModel):
+    id: str
+    created_at: pydantic.AwareDatetime
+    created_by_id: str | None
+    name: str
+    price_tier: int
+    instagram_handle: str | None
+    website: str | None
+    menu_url: str | None
+    is_reservation_required: bool | None
+    branches: list[RestaurantBranch]
+    tags: Any
 
 
 LIST_RESTAURANTS = """-- name: list_restaurants \\:many
@@ -147,7 +182,7 @@ class QuerierProtocol(Protocol):
 
     def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None: ...
 
-    def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None: ...
+    def get_restaurant(self, arg: GetRestaurantParams) -> GetRestaurantRow | None: ...
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> Iterator[models.Restaurant]: ...
 
@@ -161,7 +196,7 @@ class AsyncQuerierProtocol(Protocol):
 
     async def delete_restaurant(self, arg: DeleteRestaurantParams) -> models.Restaurant | None: ...
 
-    async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None: ...
+    async def get_restaurant(self, arg: GetRestaurantParams) -> GetRestaurantRow | None: ...
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> AsyncIterator[models.Restaurant]: ...
 
@@ -218,12 +253,12 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 is_reservation_required=cast(bool | None, row[8]),
             )
 
-    def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
+    def get_restaurant(self, arg: GetRestaurantParams) -> GetRestaurantRow | None:
         with errors._wrap_errors("get_restaurant"):
             row = self._conn.execute(sqlalchemy.text(GET_RESTAURANT), {"p1": arg.id}).first()
             if row is None:
                 return None
-            return models.Restaurant(
+            return GetRestaurantRow(
                 id=cast(str, row[0]),
                 created_at=cast(pydantic.AwareDatetime, row[1]),
                 created_by_id=cast(str | None, row[2]),
@@ -233,6 +268,8 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 website=cast(str | None, row[6]),
                 menu_url=cast(str | None, row[7]),
                 is_reservation_required=cast(bool | None, row[8]),
+                branches=cast(list[RestaurantBranch], row[9]),
+                tags=cast(Any, row[10]),
             )
 
     def list_restaurants(self, arg: ListRestaurantsParams) -> Iterator[models.Restaurant]:
@@ -349,12 +386,12 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 is_reservation_required=cast(bool | None, row[8]),
             )
 
-    async def get_restaurant(self, arg: GetRestaurantParams) -> models.Restaurant | None:
+    async def get_restaurant(self, arg: GetRestaurantParams) -> GetRestaurantRow | None:
         with errors._wrap_errors("get_restaurant"):
             row = (await self._conn.execute(sqlalchemy.text(GET_RESTAURANT), {"p1": arg.id})).first()
             if row is None:
                 return None
-            return models.Restaurant(
+            return GetRestaurantRow(
                 id=cast(str, row[0]),
                 created_at=cast(pydantic.AwareDatetime, row[1]),
                 created_by_id=cast(str | None, row[2]),
@@ -364,6 +401,8 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 website=cast(str | None, row[6]),
                 menu_url=cast(str | None, row[7]),
                 is_reservation_required=cast(bool | None, row[8]),
+                branches=cast(list[RestaurantBranch], row[9]),
+                tags=cast(Any, row[10]),
             )
 
     async def list_restaurants(self, arg: ListRestaurantsParams) -> AsyncIterator[models.Restaurant]:

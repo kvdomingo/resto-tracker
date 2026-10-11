@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class PaginatedMeta(BaseModel):
@@ -11,3 +11,13 @@ class PaginatedMeta(BaseModel):
 class Paginated[T](BaseModel):
     data: list[T]
     meta: PaginatedMeta
+
+
+class PaginationRequestParams(BaseModel):
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+
+    @computed_field
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size

@@ -4,7 +4,7 @@
 # source: groups.sql
 import pydantic
 from collections.abc import AsyncIterator, Iterator
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import sqlalchemy
 import sqlalchemy.ext.asyncio
@@ -48,13 +48,43 @@ class CreateGroupRow(pydantic.BaseModel):
 
 DELETE_GROUP = """-- name: delete_group \\:one
 DELETE FROM groups
-WHERE id = :p1
+WHERE
+  id = :p1
+  AND created_by_id = :p2
 RETURNING id, created_at, created_by_id, name
 """
 
 
 class DeleteGroupParams(pydantic.BaseModel):
     id: str
+    created_by_id: str | None
+
+
+GET_GROUP = """-- name: get_group \\:one
+SELECT
+  g.id, g.created_at, g.created_by_id, g.name,
+  JSONB_AGG(m.*) AS members
+FROM groups g
+  JOIN group_memberships m
+    ON m.group_id = g.id
+WHERE
+  g.id = :p1
+  AND g.created_by_id = :p2
+GROUP BY g.id
+"""
+
+
+class GetGroupParams(pydantic.BaseModel):
+    id: str
+    created_by_id: str | None
+
+
+class GetGroupRow(pydantic.BaseModel):
+    id: str
+    created_at: pydantic.AwareDatetime
+    created_by_id: str | None
+    name: str
+    members: Any
 
 
 LIST_ALL_GROUPS = """-- name: list_all_groups \\:many
@@ -92,14 +122,17 @@ class ListMyGroupsParams(pydantic.BaseModel):
 
 UPDATE_GROUP = """-- name: update_group \\:one
 UPDATE groups
-SET name = :p2
-WHERE id = :p1
+SET name = :p3
+WHERE
+  id = :p1
+  AND created_by_id = :p2
 RETURNING id, created_at, created_by_id, name
 """
 
 
 class UpdateGroupParams(pydantic.BaseModel):
     id: str
+    created_by_id: str | None
     name: str
 
 
@@ -107,6 +140,8 @@ class QuerierProtocol(Protocol):
     def create_group(self, arg: CreateGroupParams) -> CreateGroupRow | None: ...
 
     def delete_group(self, arg: DeleteGroupParams) -> models.Group | None: ...
+
+    def get_group(self, arg: GetGroupParams) -> GetGroupRow | None: ...
 
     def list_all_groups(self, arg: ListAllGroupsParams) -> Iterator[models.Group]: ...
 
@@ -119,6 +154,8 @@ class AsyncQuerierProtocol(Protocol):
     async def create_group(self, arg: CreateGroupParams) -> CreateGroupRow | None: ...
 
     async def delete_group(self, arg: DeleteGroupParams) -> models.Group | None: ...
+
+    async def get_group(self, arg: GetGroupParams) -> GetGroupRow | None: ...
 
     def list_all_groups(self, arg: ListAllGroupsParams) -> AsyncIterator[models.Group]: ...
 
@@ -147,7 +184,7 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
 
     def delete_group(self, arg: DeleteGroupParams) -> models.Group | None:
         with errors._wrap_errors("delete_group"):
-            row = self._conn.execute(sqlalchemy.text(DELETE_GROUP), {"p1": arg.id}).first()
+            row = self._conn.execute(sqlalchemy.text(DELETE_GROUP), {"p1": arg.id, "p2": arg.created_by_id}).first()
             if row is None:
                 return None
             return models.Group(
@@ -155,6 +192,19 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 created_at=cast(pydantic.AwareDatetime, row[1]),
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
+            )
+
+    def get_group(self, arg: GetGroupParams) -> GetGroupRow | None:
+        with errors._wrap_errors("get_group"):
+            row = self._conn.execute(sqlalchemy.text(GET_GROUP), {"p1": arg.id, "p2": arg.created_by_id}).first()
+            if row is None:
+                return None
+            return GetGroupRow(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                members=cast(Any, row[4]),
             )
 
     def list_all_groups(self, arg: ListAllGroupsParams) -> Iterator[models.Group]:
@@ -181,7 +231,7 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
 
     def update_group(self, arg: UpdateGroupParams) -> models.Group | None:
         with errors._wrap_errors("update_group"):
-            row = self._conn.execute(sqlalchemy.text(UPDATE_GROUP), {"p1": arg.id, "p2": arg.name}).first()
+            row = self._conn.execute(sqlalchemy.text(UPDATE_GROUP), {"p1": arg.id, "p2": arg.created_by_id, "p3": arg.name}).first()
             if row is None:
                 return None
             return models.Group(
@@ -212,7 +262,7 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
 
     async def delete_group(self, arg: DeleteGroupParams) -> models.Group | None:
         with errors._wrap_errors("delete_group"):
-            row = (await self._conn.execute(sqlalchemy.text(DELETE_GROUP), {"p1": arg.id})).first()
+            row = (await self._conn.execute(sqlalchemy.text(DELETE_GROUP), {"p1": arg.id, "p2": arg.created_by_id})).first()
             if row is None:
                 return None
             return models.Group(
@@ -220,6 +270,19 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 created_at=cast(pydantic.AwareDatetime, row[1]),
                 created_by_id=cast(str | None, row[2]),
                 name=cast(str, row[3]),
+            )
+
+    async def get_group(self, arg: GetGroupParams) -> GetGroupRow | None:
+        with errors._wrap_errors("get_group"):
+            row = (await self._conn.execute(sqlalchemy.text(GET_GROUP), {"p1": arg.id, "p2": arg.created_by_id})).first()
+            if row is None:
+                return None
+            return GetGroupRow(
+                id=cast(str, row[0]),
+                created_at=cast(pydantic.AwareDatetime, row[1]),
+                created_by_id=cast(str | None, row[2]),
+                name=cast(str, row[3]),
+                members=cast(Any, row[4]),
             )
 
     async def list_all_groups(self, arg: ListAllGroupsParams) -> AsyncIterator[models.Group]:
@@ -246,7 +309,7 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
 
     async def update_group(self, arg: UpdateGroupParams) -> models.Group | None:
         with errors._wrap_errors("update_group"):
-            row = (await self._conn.execute(sqlalchemy.text(UPDATE_GROUP), {"p1": arg.id, "p2": arg.name})).first()
+            row = (await self._conn.execute(sqlalchemy.text(UPDATE_GROUP), {"p1": arg.id, "p2": arg.created_by_id, "p3": arg.name})).first()
             if row is None:
                 return None
             return models.Group(

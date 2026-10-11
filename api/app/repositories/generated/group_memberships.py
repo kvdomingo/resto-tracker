@@ -14,42 +14,60 @@ from app.repositories.generated import errors, models
 
 
 ADD_TO_GROUP = """-- name: add_to_group \\:batchmany
+WITH owned_groups AS (
+  SELECT id
+  FROM groups
+  WHERE
+    id = :p1
+    AND created_by_id = :p2
+)
 INSERT INTO group_memberships (user_id, group_id)
-VALUES (:p1, :p2)
+SELECT
+  :p3 AS user_id,
+  id AS group_id
+FROM owned_groups
 ON CONFLICT DO NOTHING
 RETURNING user_id, group_id
 """
 
 
 class AddToGroupParams(pydantic.BaseModel):
+    id: str
+    created_by_id: str | None
     user_id: str
-    group_id: str
 
 
-REMOVE_FROM_GROUP = """-- name: remove_from_group \\:many
+REMOVE_FROM_GROUP = """-- name: remove_from_group \\:batchmany
 DELETE FROM group_memberships
 WHERE
-  user_id = :p1
-  AND group_id = :p2
+  user_id = :p3
+  AND group_id IN (
+    SELECT id
+    FROM groups
+    WHERE
+      id = :p1
+      AND created_by_id = :p2
+  )
 RETURNING user_id, group_id
 """
 
 
 class RemoveFromGroupParams(pydantic.BaseModel):
+    id: str
+    created_by_id: str | None
     user_id: str
-    group_id: str
 
 
 class QuerierProtocol(Protocol):
     def add_to_group(self, arg: Sequence[AddToGroupParams]) -> Iterator[list[models.GroupMembership]]: ...
 
-    def remove_from_group(self, arg: RemoveFromGroupParams) -> Iterator[models.GroupMembership]: ...
+    def remove_from_group(self, arg: Sequence[RemoveFromGroupParams]) -> Iterator[list[models.GroupMembership]]: ...
 
 
 class AsyncQuerierProtocol(Protocol):
     def add_to_group(self, arg: Sequence[AddToGroupParams]) -> AsyncIterator[list[models.GroupMembership]]: ...
 
-    def remove_from_group(self, arg: RemoveFromGroupParams) -> AsyncIterator[models.GroupMembership]: ...
+    def remove_from_group(self, arg: Sequence[RemoveFromGroupParams]) -> AsyncIterator[list[models.GroupMembership]]: ...
 
 
 class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
@@ -64,16 +82,15 @@ class Querier[_ConnT: sqlalchemy.engine.Connection | sqlalchemy.orm.Session]:
                 yield [models.GroupMembership(
                     user_id=cast(str, row[0]),
                     group_id=cast(str, row[1]),
-                ) for row in self._conn.execute(sqlalchemy.text(ADD_TO_GROUP), {"p1": a.user_id, "p2": a.group_id})]
+                ) for row in self._conn.execute(sqlalchemy.text(ADD_TO_GROUP), {"p1": a.id, "p2": a.created_by_id, "p3": a.user_id})]
 
-    def remove_from_group(self, arg: RemoveFromGroupParams) -> Iterator[models.GroupMembership]:
+    def remove_from_group(self, arg: Sequence[RemoveFromGroupParams]) -> Iterator[list[models.GroupMembership]]:
         with errors._wrap_errors("remove_from_group"):
-            result = self._conn.execute(sqlalchemy.text(REMOVE_FROM_GROUP), {"p1": arg.user_id, "p2": arg.group_id})
-            for row in result:
-                yield models.GroupMembership(
+            for a in arg:
+                yield [models.GroupMembership(
                     user_id=cast(str, row[0]),
                     group_id=cast(str, row[1]),
-                )
+                ) for row in self._conn.execute(sqlalchemy.text(REMOVE_FROM_GROUP), {"p1": a.id, "p2": a.created_by_id, "p3": a.user_id})]
 
 
 class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.ext.asyncio.AsyncSession]:
@@ -88,13 +105,12 @@ class AsyncQuerier[_ConnT: sqlalchemy.ext.asyncio.AsyncConnection | sqlalchemy.e
                 yield [models.GroupMembership(
                     user_id=cast(str, row[0]),
                     group_id=cast(str, row[1]),
-                ) for row in await self._conn.execute(sqlalchemy.text(ADD_TO_GROUP), {"p1": a.user_id, "p2": a.group_id})]
+                ) for row in await self._conn.execute(sqlalchemy.text(ADD_TO_GROUP), {"p1": a.id, "p2": a.created_by_id, "p3": a.user_id})]
 
-    async def remove_from_group(self, arg: RemoveFromGroupParams) -> AsyncIterator[models.GroupMembership]:
+    async def remove_from_group(self, arg: Sequence[RemoveFromGroupParams]) -> AsyncIterator[list[models.GroupMembership]]:
         with errors._wrap_errors("remove_from_group"):
-            result = await self._conn.stream(sqlalchemy.text(REMOVE_FROM_GROUP), {"p1": arg.user_id, "p2": arg.group_id})
-            async for row in result:
-                yield models.GroupMembership(
+            for a in arg:
+                yield [models.GroupMembership(
                     user_id=cast(str, row[0]),
                     group_id=cast(str, row[1]),
-                )
+                ) for row in await self._conn.execute(sqlalchemy.text(REMOVE_FROM_GROUP), {"p1": a.id, "p2": a.created_by_id, "p3": a.user_id})]
